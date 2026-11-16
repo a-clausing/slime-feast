@@ -106,8 +106,14 @@ export class GameScene extends Phaser.Scene {
     // decorations (seeded, constant layout)
     for (const d of generateDecor(1337)) {
       const ds = DECOR_REF / this.texW(`decor${d.type}`);
-      const img = this.add.image(d.x, d.y, `decor${d.type}`).setScale(d.scale * 1.15 * ds).setRotation(d.rot).setDepth(DEPTH.decor);
-      if (d.type === 2) img.setAlpha(0.55);
+      // Dimmed and desaturated toward the floor so decorations never read as gems or creatures.
+      this.add
+        .image(d.x, d.y, `decor${d.type}`)
+        .setScale(d.scale * 1.15 * ds)
+        .setRotation(d.rot)
+        .setDepth(DEPTH.decor)
+        .setTint(0x5e5470)
+        .setAlpha(d.type === 2 ? 0.35 : 0.6);
     }
 
     // walls: thick stone border with a glowing inner edge + torches

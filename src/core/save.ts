@@ -112,6 +112,7 @@ export function deserializeWorld(data: unknown): World {
     score: Number(s.stats.score) || 0,
     time: Number(s.stats.time) || 0,
     bestMass: Number(s.stats.bestMass) || 0,
+    finalMass: Number(s.stats.finalMass) || 0,
     creaturesEaten: Number(s.stats.creaturesEaten) || 0,
     pelletsEaten: Number(s.stats.pelletsEaten) || 0,
     splits: Number(s.stats.splits) || 0,
@@ -170,8 +171,12 @@ const RUN_KEY = 'slimeFeast.run.v1';
 const META_KEY = 'slimeFeast.meta';
 
 export interface MetaSave {
-  highScore: number;
-  bestMass: number;
+  /** Best final mass (the score). */
+  bestFinal: number;
+  /** Highest mass ever reached during a run. */
+  bestPeak: number;
+  /** Longest survival time in seconds. */
+  longest: number;
   muted: boolean;
 }
 
@@ -219,14 +224,15 @@ export function clearRun(): void {
 }
 
 export function loadMeta(): MetaSave {
-  const def: MetaSave = { highScore: 0, bestMass: 0, muted: false };
+  const def: MetaSave = { bestFinal: 0, bestPeak: 0, longest: 0, muted: false };
   try {
     const raw = storage()?.getItem(META_KEY);
     if (!raw) return def;
     const m = JSON.parse(raw) as Partial<MetaSave>;
     return {
-      highScore: Number(m.highScore) || 0,
-      bestMass: Number(m.bestMass) || 0,
+      bestFinal: Number(m.bestFinal) || 0,
+      bestPeak: Number((m as { bestPeak?: number; bestMass?: number }).bestPeak ?? (m as { bestMass?: number }).bestMass) || 0,
+      longest: Number(m.longest) || 0,
       muted: !!m.muted,
     };
   } catch {

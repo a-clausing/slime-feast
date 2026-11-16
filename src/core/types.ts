@@ -63,6 +63,8 @@ export interface RunStats {
   score: number;
   time: number;
   bestMass: number;
+  /** Total player mass at the moment the run ended (the run's score). */
+  finalMass: number;
   creaturesEaten: number;
   pelletsEaten: number;
   splits: number;

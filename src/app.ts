@@ -88,7 +88,9 @@ export class App implements RenderHost {
     this.controls.enabled = state === 'playing';
     if (state !== 'playing') this.controls.reset();
     if (state === 'menu') {
-      $('menu-high').textContent = fmtNum(this.meta.highScore);
+      $('menu-high').textContent = fmtNum(this.meta.bestFinal);
+      $('menu-peak').textContent = fmtNum(this.meta.bestPeak);
+      $('menu-longest').textContent = fmtTime(this.meta.longest);
       this.el.cont.classList.toggle('hidden', !loadRun());
     }
     this.hud.reset();
@@ -103,7 +105,6 @@ export class App implements RenderHost {
     this.scene.bindWorld(this.world);
     this.acc = 0;
     this.saveTimer = 0;
-    this.world.startHigh = this.meta.highScore;
     this.show('playing');
     this.tryLockPortrait();
     if (this.tutorialStage < 4) {
@@ -173,17 +174,27 @@ export class App implements RenderHost {
   private endRun(): void {
     const w = this.world!;
     clearRun();
-    const newHigh = Math.floor(w.stats.score) > w.startHigh && w.stats.score > 0;
-    this.meta.highScore = Math.max(this.meta.highScore, Math.floor(w.stats.score));
-    this.meta.bestMass = Math.max(this.meta.bestMass, Math.floor(w.stats.bestMass));
+    const final = Math.floor(w.stats.finalMass);
+    const peak = Math.floor(w.stats.bestMass);
+    const time = Math.floor(w.stats.time);
+    const newFinal = final > this.meta.bestFinal;
+    const newPeak = peak > this.meta.bestPeak;
+    const newTime = time > this.meta.longest;
+    this.meta.bestFinal = Math.max(this.meta.bestFinal, final);
+    this.meta.bestPeak = Math.max(this.meta.bestPeak, peak);
+    this.meta.longest = Math.max(this.meta.longest, time);
     saveMeta(this.meta);
-    $('go-score').textContent = fmtNum(w.stats.score);
-    $('go-high').textContent = fmtNum(this.meta.highScore);
+    $('go-score').textContent = fmtNum(final);
+    $('go-high').textContent = fmtNum(this.meta.bestFinal);
+    $('go-best-peak').textContent = fmtNum(this.meta.bestPeak);
+    $('go-longest').textContent = fmtTime(this.meta.longest);
+    $('go-new-peak').classList.toggle('hidden', !newPeak);
+    $('go-new-time').classList.toggle('hidden', !newTime);
     $('go-time').textContent = fmtTime(w.stats.time);
     $('go-mass').textContent = fmtNum(w.stats.bestMass);
     $('go-eaten').textContent = fmtNum(w.stats.creaturesEaten);
     $('go-splits').textContent = fmtNum(w.stats.splits);
-    $('go-newhigh').classList.toggle('hidden', !newHigh);
+    $('go-newhigh').classList.toggle('hidden', !newFinal);
     this.show('gameover');
   }
 
@@ -307,10 +318,6 @@ export class App implements RenderHost {
     const w = this.world;
     if (!w || w.gameOver || this.state === 'menu' || this.state === 'gameover' || this.state === 'dying') return;
     saveRun(w, this.scene.cameraState());
-    if (w.stats.score > this.meta.highScore) {
-      this.meta.highScore = Math.floor(w.stats.score);
-      saveMeta(this.meta);
-    }
   }
 
   private wireLifecycle(): void {
@@ -374,11 +381,14 @@ export class App implements RenderHost {
     this.btn('btn-sound-settings', () => this.toggleSound());
     this.btn('btn-sound-pause', () => this.toggleSound());
     this.btn('btn-reset-records', () => {
-      if (!confirm('Reset your high score and best mass?')) return;
-      this.meta.highScore = 0;
-      this.meta.bestMass = 0;
+      if (!confirm('Reset all your records?')) return;
+      this.meta.bestFinal = 0;
+      this.meta.bestPeak = 0;
+      this.meta.longest = 0;
       saveMeta(this.meta);
       $('menu-high').textContent = '0';
+      $('menu-peak').textContent = '0';
+      $('menu-longest').textContent = '0:00';
     });
   }
 

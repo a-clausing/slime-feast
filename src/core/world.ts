@@ -38,7 +38,9 @@ export class World {
   lastDirX = 1;
   lastDirY = 0;
 
-  stats: RunStats = { score: 0, time: 0, bestMass: 0, creaturesEaten: 0, pelletsEaten: 0, splits: 0 };
+  stats: RunStats = { score: 0, time: 0, bestMass: 0, finalMass: 0, creaturesEaten: 0, pelletsEaten: 0, splits: 0 };
+  /** Player mass at the start of the current step (what you had when the final blow landed). */
+  private massBeforeStep = 0;
   gameOver = false;
   /** High score at the moment this run started (for the "new high score" badge). */
   startHigh = 0;
@@ -299,6 +301,7 @@ export class World {
       s.px = s.x;
       s.py = s.y;
     }
+    this.massBeforeStep = this.totalPlayerMass();
 
     this.moveSlimes(dt, input);
     this.eatFood();
@@ -563,6 +566,7 @@ export class World {
 
   private endRun(): void {
     this.gameOver = true;
+    this.stats.finalMass = this.massBeforeStep;
     this.homeId = -1;
     this.events.push({ type: 'gameover' });
   }

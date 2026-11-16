@@ -247,8 +247,8 @@ try {
     await sleep(100);
     s = await state(page);
     check('PLAY AGAIN restarts immediately and fully resets', s.state === 'playing' && s.mass === 25 && s.score === 0 && s.time < 0.5 && !s.split, `${Date.now() - t0}ms`);
-    const hs = await page.evaluate(() => JSON.parse(localStorage.getItem('slimeFeast.meta')).highScore);
-    check('high score persisted', hs > 0, String(hs));
+    const hs = await page.evaluate(() => JSON.parse(localStorage.getItem('slimeFeast.meta')));
+    check('records persisted (final mass, peak, longest)', hs.bestFinal === 300 && hs.bestPeak >= 500 && hs.longest >= 1, JSON.stringify(hs));
     check('new-high-score badge was shown', newHighShown);
 
     // FPS sample during normal play

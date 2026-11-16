@@ -359,6 +359,31 @@ describe('scoring', () => {
     expect(w.stats.score).toBe(before);
   });
 
+  it('records final mass (what you carried when the last portion was eaten)', () => {
+    const { w } = emptyWorld(500);
+    w.trySplit();
+    const act = w.active!;
+    enemy(w, act.x, act.y, 1000); // eat the 200 hunter first
+    quietStep(w, 1);
+    expect(w.gameOver).toBe(false);
+    const home = w.active!; // control moved to the 300 portion
+    enemy(w, home.x, home.y, 2000);
+    quietStep(w, 1);
+    expect(w.gameOver).toBe(true);
+    expect(w.stats.finalMass).toBe(300);
+    expect(w.stats.bestMass).toBe(500);
+  });
+
+  it('final mass includes both portions if they die in the same moment', () => {
+    const { w } = emptyWorld(500);
+    w.trySplit();
+    enemy(w, w.home!.x, w.home!.y, 2000);
+    enemy(w, w.active!.x, w.active!.y, 2000);
+    quietStep(w, 1);
+    expect(w.gameOver).toBe(true);
+    expect(w.stats.finalMass).toBe(500);
+  });
+
   it('tracks best mass across both portions', () => {
     const { w } = emptyWorld(500);
     w.trySplit();

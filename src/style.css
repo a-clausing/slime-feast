@@ -623,3 +623,44 @@ button {
     transform: rotate(0deg);
   }
 }
+
+.menu-records {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  width: 100%;
+  max-width: 320px;
+}
+.menu-records div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(18, 8, 29, 0.7);
+  border: 2px solid rgba(160, 110, 255, 0.3);
+  border-radius: 14px;
+  padding: 6px 4px;
+}
+.menu-records small {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #b9a4e6;
+}
+.menu-records b {
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffd84d;
+  font-variant-numeric: tabular-nums;
+}
+.rec {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 900;
+  background: #ffd84d;
+  color: #3a2400;
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 4px;
+  vertical-align: 2px;
+}

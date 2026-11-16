@@ -54,7 +54,7 @@ export class Hud {
   update(w: World, scene: GameScene): void {
     const a = w.active;
     const home = w.home;
-    this.set('score', this.score, fmtNum(w.stats.score));
+    this.set('score', this.score, fmtNum(w.stats.bestMass));
     this.set('mass', this.mass, fmtNum(a?.mass ?? 0));
     this.set('time', this.time, fmtTime(w.stats.time));
     this.cls('hm', this.homeMass, 'hidden', !home);

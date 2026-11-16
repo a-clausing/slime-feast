@@ -27,7 +27,7 @@
       <div id="hud" class="hidden">
         <div class="hud-top">
           <div class="hud-stat">
-            <span class="hud-label">SCORE</span>
+            <span class="hud-label">PEAK</span>
             <span id="hud-score" class="hud-value">0</span>
           </div>
           <div class="hud-stat hud-mass">
@@ -73,7 +73,11 @@
           </div>
           <button id="btn-play" class="btn btn-primary btn-big">PLAY</button>
           <button id="btn-continue" class="btn btn-secondary hidden">CONTINUE RUN</button>
-          <div class="menu-high">BEST <span id="menu-high">0</span></div>
+          <div class="menu-records">
+            <div><small>FINAL MASS</small><b id="menu-high">0</b></div>
+            <div><small>PEAK MASS</small><b id="menu-peak">0</b></div>
+            <div><small>LONGEST</small><b id="menu-longest">0:00</b></div>
+          </div>
         </div>
         <button id="btn-settings" class="icon-btn corner-btn" aria-label="Settings">
           <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.9 4.6-.1-1.1 2-1.6-2-3.4-2.4.9a8 8 0 0 0-1.9-1.1L16 4.2h-4l-.5 2.6c-.7.3-1.3.6-1.9 1.1l-2.4-.9-2 3.4 2 1.6a8 8 0 0 0 0 2.2l-2 1.6 2 3.4 2.4-.9c.6.5 1.2.8 1.9 1.1l.5 2.6h4l.5-2.6c.7-.3 1.3-.6 1.9-1.1l2.4.9 2-3.4-2-1.6.1-1.1Z" /></svg>
@@ -89,6 +93,7 @@
             <h3>HOW TO PLAY</h3>
             <p>Drag anywhere on the left side to move.</p>
             <p>Eat gems and any creature with a <span class="green">green glow</span> (you're 20%+ bigger). Run from anything with a <span class="red">red glow</span>. No glow = same size, you just bump.</p>
+            <p>Your <b>score</b> is your <b>final mass</b>: everything you're carrying when your last piece gets eaten. Records are also kept for peak mass and longest game.</p>
             <p>At <b>100 mass</b>, tap <b>SPLIT</b>: 60% stays put, 40% goes hunting faster. Touch your stationary half to merge again.</p>
           </div>
           <button id="btn-reset-records" class="btn btn-ghost">Reset records</button>
@@ -111,12 +116,14 @@
       <section id="screen-gameover" class="screen modal hidden">
         <div class="panel">
           <h2 class="go-title">GAME OVER</h2>
-          <div id="go-newhigh" class="newhigh hidden">NEW HIGH SCORE!</div>
-          <div class="go-score"><span id="go-score">0</span><small>SCORE</small></div>
+          <div id="go-newhigh" class="newhigh hidden">NEW BEST FINAL MASS!</div>
+          <div class="go-score"><span id="go-score">0</span><small>FINAL MASS</small></div>
           <div class="stats">
-            <div><span>High score</span><b id="go-high">0</b></div>
-            <div><span>Survived</span><b id="go-time">0:00</b></div>
-            <div><span>Best mass</span><b id="go-mass">0</b></div>
+            <div><span>Best final mass</span><b id="go-high">0</b></div>
+            <div><span>Peak mass <i id="go-new-peak" class="rec hidden">NEW BEST</i></span><b id="go-mass">0</b></div>
+            <div><span>Best peak mass</span><b id="go-best-peak">0</b></div>
+            <div><span>Survived <i id="go-new-time" class="rec hidden">NEW BEST</i></span><b id="go-time">0:00</b></div>
+            <div><span>Longest game</span><b id="go-longest">0:00</b></div>
             <div><span>Creatures eaten</span><b id="go-eaten">0</b></div>
             <div><span>Splits used</span><b id="go-splits">0</b></div>
           </div>
