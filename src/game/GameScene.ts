@@ -336,7 +336,7 @@ export class GameScene extends Phaser.Scene {
       if (s.kind === 'enemy') {
         const danger = activeMass > 0 && canConsume(s.mass, activeMass);
         v.aura.setVisible(danger);
-        if (danger) v.aura.setPosition(x, y).setScale((v.dispR * 3) / 128).setAlpha(0.32 + 0.1 * Math.sin(t * 5 + v.phase));
+        if (danger) v.aura.setPosition(x, y).setScale((v.dispR * 3.3) / 128).setAlpha(0.6 + 0.2 * Math.sin(t * 5 + v.phase));
       }
       if (v.label) {
         const txt = String(Math.floor(s.mass));
