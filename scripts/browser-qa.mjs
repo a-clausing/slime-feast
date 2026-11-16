@@ -170,7 +170,9 @@ try {
     // move far away so the indicator shows
     await page.evaluate(() => {
       const w = window.__slimeFeast.app.world;
-      w.active.x = Math.min(2900, w.home.x + 900);
+      w.active.x = w.home.x + (w.home.x < 1500 ? 900 : -900);
+      w.active.y = Math.min(2400, Math.max(600, w.home.y));
+      w.active.vx = w.active.vy = 0;
     });
     await sleep(900);
     const indVisible = await page.$eval('#home-indicator', (e) => !e.classList.contains('hidden'));

@@ -197,7 +197,12 @@ export class World {
    * position; 40% becomes the controlled portion, placed just beyond the home in the
    * last movement direction. Total mass is preserved exactly. No speed bonus.
    */
-  trySplit(): boolean {
+  /**
+   * @param aimX,aimY the current joystick/keyboard vector at the moment SPLIT is pressed.
+   *   If it's being held (length > AIM_HELD), the split goes exactly that way; otherwise
+   *   the smoothed recent aim is used (immune to thumb-lift jitter).
+   */
+  trySplit(aimX = 0, aimY = 0): boolean {
     if (!this.canSplit()) return false;
     const a = this.active!;
     const total = a.mass;
@@ -207,8 +212,9 @@ export class World {
     const rAct = radiusForMass(activeMass);
     const sep = rHome + rAct + CONFIG.SPLIT_GAP;
 
-    let dx = this.lastDirX;
-    let dy = this.lastDirY;
+    const held = Math.hypot(aimX, aimY) > CONFIG.AIM_HELD;
+    let dx = held ? aimX : this.lastDirX;
+    let dy = held ? aimY : this.lastDirY;
     const l = Math.hypot(dx, dy);
     if (l < 1e-6) {
       dx = 1;
@@ -247,15 +253,18 @@ export class World {
     // The original slime entity becomes the stationary home portion (keeps its exact position).
     a.kind = 'home';
     a.mass = homeMass;
-    const vx = a.vx;
-    const vy = a.vy;
     a.vx = 0;
     a.vy = 0;
     const mobile = this.addSlime('player', ax, ay, activeMass);
     mobile.px = a.x; // render interpolation: visually emerge from the original body
     mobile.py = a.y;
-    mobile.vx = vx; // momentum continuity only — no dash, no burst
-    mobile.vy = vy;
+    // Heads off in the aim direction at (never above) its normal size-based speed — no dash.
+    const sp = speedForMass(activeMass);
+    const dl = Math.hypot(ax - a.x, ay - a.y) || 1;
+    mobile.vx = ((ax - a.x) / dl) * sp;
+    mobile.vy = ((ay - a.y) / dl) * sp;
+    this.lastDirX = (ax - a.x) / dl;
+    this.lastDirY = (ay - a.y) / dl;
 
     this.homeId = a.id;
     this.activeId = mobile.id;
@@ -327,9 +336,22 @@ export class World {
 
   private moveSlimes(dt: number, input: InputState): void {
     const il = Math.hypot(input.x, input.y);
-    if (il > 0.01) {
-      this.lastDirX = input.x / il;
-      this.lastDirY = input.y / il;
+    if (il > CONFIG.AIM_HELD) {
+      // Smoothed aim: follows deliberate steering within ~0.1 s, but a quick flick as the
+      // thumb leaves the joystick (to tap SPLIT) barely moves it.
+      const ka = 1 - Math.exp(-dt / CONFIG.AIM_SMOOTH);
+      let ax = this.lastDirX + (input.x / il - this.lastDirX) * ka;
+      let ay = this.lastDirY + (input.y / il - this.lastDirY) * ka;
+      const al = Math.hypot(ax, ay);
+      if (al < 1e-6) {
+        ax = input.x / il;
+        ay = input.y / il;
+      } else {
+        ax /= al;
+        ay /= al;
+      }
+      this.lastDirX = ax;
+      this.lastDirY = ay;
     }
     const k = 1 - Math.exp(-CONFIG.ACCEL_RESPONSE * dt);
     const ke = 1 - Math.exp(-CONFIG.ACCEL_RESPONSE * 0.6 * dt);

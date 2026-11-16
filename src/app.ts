@@ -153,7 +153,7 @@ export class App implements RenderHost {
 
   private split(): void {
     if (this.state !== 'playing' || !this.world) return;
-    if (this.world.trySplit()) {
+    if (this.world.trySplit(this.controls.input.x, this.controls.input.y)) {
       this.sfx.split();
       if (navigator.vibrate) navigator.vibrate(18);
       if (this.tutorialStage < 4) {

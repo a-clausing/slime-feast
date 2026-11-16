@@ -155,6 +155,29 @@ describe('Slime Split', () => {
     expect(w.active!.y).toBeLessThan(home0.y);
   });
 
+  it('splits toward the joystick direction held at the moment of the press', () => {
+    const { w } = emptyWorld(400);
+    quietStep(w, 30, { x: 1, y: 0 }); // was moving right
+    const h = { x: w.active!.x, y: w.active!.y };
+    w.trySplit(0, 1); // aiming down when SPLIT is pressed
+    const a = w.active!;
+    expect(a.y).toBeGreaterThan(h.y + 50);
+    expect(Math.abs(a.x - h.x)).toBeLessThan(1e-6);
+    expect(a.vy).toBeGreaterThan(0);
+    expect(Math.hypot(a.vx, a.vy)).toBeLessThanOrEqual(speedForMass(a.mass) + 1e-9);
+  });
+
+  it('ignores a brief thumb flick right before SPLIT (smoothed aim)', () => {
+    const { w } = emptyWorld(400);
+    quietStep(w, 60, { x: 0, y: -1 }); // steering up for a second
+    quietStep(w, 2, { x: 1, y: 0.3 }); // ~33 ms flick toward the SPLIT button as the thumb lifts
+    const h = { x: w.active!.x, y: w.active!.y };
+    w.trySplit(0, 0); // joystick released
+    const a = w.active!;
+    const ang = Math.atan2(a.y - h.y, a.x - h.x);
+    expect(Math.abs(ang - -Math.PI / 2)).toBeLessThan(0.5); // still basically "up"
+  });
+
   it('keeps both portions inside the arena when split at a wall', () => {
     const r = radiusForMass(400);
     const { w } = emptyWorld(400, CONFIG.WORLD_WIDTH - r, CONFIG.WORLD_HEIGHT - r);
@@ -277,8 +300,8 @@ describe('Slime Split', () => {
     expect(w.gameOver).toBe(false);
     expect(w.isSplit).toBe(false);
     expect(w.activeId).toBe(actId);
-    expect(w.active!.x).toBeCloseTo(ax);
-    expect(w.active!.y).toBeCloseTo(ay);
+    // only its own one-step movement, no teleport
+    expect(Math.hypot(w.active!.x - ax, w.active!.y - ay)).toBeLessThan(speedForMass(200) * CONFIG.SIM_DT + 0.5);
     expect(w.active!.mass).toBe(200);
     expect(w.canSplit()).toBe(true);
   });
@@ -352,7 +375,7 @@ describe('difficulty', () => {
     for (let t = 0; t < 3600; t += 15) {
       const p = pressureAt(t);
       expect(p.level).toBeGreaterThanOrEqual(prev);
-      expect(p.level).toBeLessThan(2);
+      expect(p.level).toBeLessThan(2.7);
       expect(p.enemyTarget).toBeLessThanOrEqual(CONFIG.ENEMY_HARD_CAP);
       prev = p.level;
     }

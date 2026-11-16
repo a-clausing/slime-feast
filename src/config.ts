@@ -18,12 +18,12 @@ export const CONFIG = {
 
   // ── Speed ───────────────────────────────────────────────────
   /** speed = SPEED_BASE * (mass / STARTING_MASS) ^ -SPEED_EXPONENT, clamped. */
-  SPEED_BASE: 250,
-  SPEED_EXPONENT: 0.3,
-  SPEED_MIN: 70,
-  SPEED_MAX: 270,
+  SPEED_BASE: 335,
+  SPEED_EXPONENT: 0.27,
+  SPEED_MIN: 120,
+  SPEED_MAX: 360,
   /** How quickly velocity approaches the desired velocity (1/s). Higher = snappier. */
-  ACCEL_RESPONSE: 11,
+  ACCEL_RESPONSE: 13,
 
   // ── Consumption ─────────────────────────────────────────────
   CONSUME_RATIO: 1.2,
@@ -41,7 +41,7 @@ export const CONFIG = {
   MIN_SPLIT_MASS: 100,
   SPLIT_STATIONARY_RATIO: 0.6,
   /** Extra gap (world units) between the two portions' rims right after a split. */
-  SPLIT_GAP: 14,
+  SPLIT_GAP: 22,
   /**
    * Separation latch: recombination is armed once the rim gap between portions
    * exceeds this distance (i.e. the mobile portion has physically moved away),
@@ -49,6 +49,10 @@ export const CONFIG = {
    */
   RECOMBINE_LATCH_CLEAR: 26,
   RECOMBINE_LATCH_MAX_TIME: 0.45,
+  /** Joystick magnitude that counts as deliberate aiming. */
+  AIM_HELD: 0.35,
+  /** Aim smoothing time constant (s): ignores the flick when the thumb leaves the stick. */
+  AIM_SMOOTH: 0.1,
 
   // ── Arena ───────────────────────────────────────────────────
   WORLD_WIDTH: 3000,
@@ -68,14 +72,14 @@ export const CONFIG = {
   FOOD_BIG_RADIUS: 10,
 
   // ── Enemies ─────────────────────────────────────────────────
-  ENEMY_COUNT_START: 22,
-  ENEMY_COUNT_MAX: 42,
+  ENEMY_COUNT_START: 24,
+  ENEMY_COUNT_MAX: 50,
   /** Hard cap for mobile performance. */
-  ENEMY_HARD_CAP: 48,
+  ENEMY_HARD_CAP: 56,
   ENEMY_MIN_MASS: 8,
   /** Enemies move at this fraction of the shared speed formula. */
-  ENEMY_SPEED_FACTOR: 0.82,
-  ENEMY_SPEED_FACTOR_MAX: 0.9,
+  ENEMY_SPEED_FACTOR: 0.84,
+  ENEMY_SPEED_FACTOR_MAX: 0.97,
   /** Spawn clearance from any player portion = view radius estimate + this. */
   ENEMY_SPAWN_CLEARANCE: 520,
   /** Large predators spawn at least this far from the player at run start. */
@@ -103,11 +107,11 @@ export const CONFIG = {
   PHASE_SURVIVAL: 90,
   PHASE_ENDLESS: 180,
   /** After PHASE_ENDLESS, pressure keeps rising at this rate per minute (asymptotic). */
-  ENDLESS_RAMP_PER_MIN: 0.12,
+  ENDLESS_RAMP_PER_MIN: 0.3,
 
   // ── Camera ──────────────────────────────────────────────────
   /** World units visible across the narrow screen dimension at starting size. */
-  VIEW_SPAN_MIN: 400,
+  VIEW_SPAN_MIN: 440,
   /** Additional span per unit of player radius. */
   VIEW_SPAN_PER_RADIUS: 6.5,
   VIEW_SPAN_MAX: 2200,

@@ -31,31 +31,31 @@ export function pressureAt(t: number): Pressure {
     level = t / CONFIG.PHASE_ENDLESS;
   } else {
     const extraMin = (t - CONFIG.PHASE_ENDLESS) / 60;
-    // asymptotic ramp: approaches +0.9 over many minutes
-    level = 1 + 0.9 * (1 - Math.exp(-extraMin * CONFIG.ENDLESS_RAMP_PER_MIN));
+    // asymptotic ramp: keeps getting harder for many minutes, approaching level 2.6
+    level = 1 + 1.6 * (1 - Math.exp(-extraMin * CONFIG.ENDLESS_RAMP_PER_MIN));
   }
   const phase = phaseFor(t);
   const lv = Math.min(level, 1);
   const enemyTarget = Math.round(
-    CONFIG.ENEMY_COUNT_START + (CONFIG.ENEMY_COUNT_MAX - CONFIG.ENEMY_COUNT_START) * Math.min(1, level / 1.4),
+    CONFIG.ENEMY_COUNT_START + (CONFIG.ENEMY_COUNT_MAX - CONFIG.ENEMY_COUNT_START) * Math.min(1, level / 1.8),
   );
   const tierWeights: [number, number, number] =
     phase === 'feeding'
-      ? [0.74, 0.2, 0.06]
+      ? [0.7, 0.2, 0.1]
       : phase === 'hunting'
-        ? [0.56, 0.24, 0.2]
+        ? [0.5, 0.24, 0.26]
         : phase === 'survival'
-          ? [0.46, 0.26, 0.28]
-          : [0.4, 0.26, 0.34 + 0.08 * (level - 1)];
+          ? [0.4, 0.24, 0.36]
+          : [0.34, 0.22, 0.44 + 0.2 * (level - 1)];
   return {
     phase,
     level,
     enemyTarget: Math.min(enemyTarget, CONFIG.ENEMY_HARD_CAP),
     tierWeights,
-    predatorScale: 1 + 0.5 * lv + 0.3 * Math.max(0, level - 1),
+    predatorScale: 1 + 0.6 * lv + 0.5 * Math.max(0, level - 1),
     enemySpeedFactor:
-      CONFIG.ENEMY_SPEED_FACTOR + (CONFIG.ENEMY_SPEED_FACTOR_MAX - CONFIG.ENEMY_SPEED_FACTOR) * Math.min(1, level / 1.5),
-    detectMult: 0.85 + 0.3 * lv + 0.15 * Math.max(0, level - 1),
-    playerFocus: 0.35 + 0.35 * lv + 0.15 * Math.max(0, level - 1),
+      CONFIG.ENEMY_SPEED_FACTOR + (CONFIG.ENEMY_SPEED_FACTOR_MAX - CONFIG.ENEMY_SPEED_FACTOR) * Math.min(1, level / 2.2),
+    detectMult: 0.9 + 0.35 * lv + 0.3 * Math.max(0, level - 1),
+    playerFocus: 0.4 + 0.45 * lv + 0.4 * Math.max(0, level - 1),
   };
 }
