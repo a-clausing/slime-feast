@@ -4,7 +4,7 @@ import { generateDecor } from '../core/arena';
 import { canConsume, radiusForMass } from '../core/mass';
 import type { GameEvent, Slime } from '../core/types';
 import type { World } from '../core/world';
-import { ENEMY_TINTS, PLAYER_TINT, SLIME_BODY_R, generateTextures } from './textures';
+import { DECOR_REF, ENEMY_TINTS, FLOOR_REF, FOOD_BIG_REF, FOOD_REF, PLAYER_TINT, SLIME_BODY_R, generateTextures } from './textures';
 
 interface SlimeView {
   id: number;
@@ -85,18 +85,29 @@ export class GameScene extends Phaser.Scene {
   preload(): void {
     // Relative path so it resolves under the GitHub Pages base path.
     this.load.image('slimePlayer', 'sprites/slime-player.png');
+    for (let v = 0; v < 6; v++) this.load.image(`slimeEnemy${v}`, `sprites/enemy-${v}.png`);
+    for (let v = 0; v < 4; v++) this.load.image(`food${v}`, `sprites/food-${v}.png`);
+    this.load.image('foodBig', 'sprites/food-big.png');
+    for (let v = 0; v < 5; v++) this.load.image(`decor${v}`, `sprites/decor-${v}.png`);
+    this.load.image('floor', 'sprites/floor.png');
   }
 
   create(): void {
     generateTextures(this);
     const W = CONFIG.WORLD_WIDTH;
     const H = CONFIG.WORLD_HEIGHT;
-    this.add.tileSprite(0, 0, W, H, 'floor').setOrigin(0).setDepth(DEPTH.floor);
+    const floorW = this.texW('floor');
+    // the painted floor has ~4 slabs per tile; keep slabs around 120 world units
+    const floorScale = floorW === FLOOR_REF ? 1 : 0.95;
+    this.add.tileSprite(0, 0, W, H, 'floor').setOrigin(0).setDepth(DEPTH.floor).setTileScale(floorScale).setTint(0xa49cb4);
+    this.foodScale = [0, 1, 2, 3].map((v) => FOOD_REF / this.texW(`food${v}`));
+    this.foodBigScale = FOOD_BIG_REF / this.texW('foodBig');
 
     // decorations (seeded, constant layout)
     for (const d of generateDecor(1337)) {
-      const img = this.add.image(d.x, d.y, `decor${d.type}`).setScale(d.scale * 1.15).setRotation(d.rot).setDepth(DEPTH.decor);
-      if (d.type === 2) img.setAlpha(0.8);
+      const ds = DECOR_REF / this.texW(`decor${d.type}`);
+      const img = this.add.image(d.x, d.y, `decor${d.type}`).setScale(d.scale * 1.15 * ds).setRotation(d.rot).setDepth(DEPTH.decor);
+      if (d.type === 2) img.setAlpha(0.55);
     }
 
     // walls: thick stone border with a glowing inner edge + torches
@@ -136,6 +147,13 @@ export class GameScene extends Phaser.Scene {
     cam.setBackgroundColor('#0a0610');
     this.ready = true;
     this.game.events.emit('scene-ready');
+  }
+
+  private foodScale = [1, 1, 1, 1];
+  private foodBigScale = 1;
+
+  private texW(key: string): number {
+    return (this.textures.get(key).getSourceImage() as HTMLImageElement).width;
   }
 
   private torch(x: number, y: number): void {
@@ -396,7 +414,7 @@ export class GameScene extends Phaser.Scene {
       const vis = f.x > view.x - m && f.x < view.right + m && f.y > view.y - m && f.y < view.bottom + m;
       img.setVisible(vis);
       if (vis) {
-        const target = (f.big ? 1.15 : 0.95) * (1 + 0.08 * Math.sin(t * 4 + f.id));
+        const target = (f.big ? 1.15 * this.foodBigScale : 0.95 * this.foodScale[f.variant]) * (1 + 0.08 * Math.sin(t * 4 + f.id));
         const cur = img.scaleX;
         img.setScale(cur < target * 0.98 ? Math.min(target, cur + 0.08) : target);
       }

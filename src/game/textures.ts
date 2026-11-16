@@ -1,8 +1,16 @@
 import Phaser from 'phaser';
 import { ENEMY_VARIANTS } from '../core/world';
 
+/** Reference sizes the procedural fallbacks were designed at; loaded sprites are scaled to match. */
+export const FOOD_REF = 48;
+export const FOOD_BIG_REF = 72;
+export const DECOR_REF = 128;
+export const FLOOR_REF = 256;
+
 /**
- * All in-game art is generated procedurally at boot (no third-party assets).
+ * Sprite art (public/sprites) is loaded in GameScene.preload(); anything missing falls back
+ * to the procedural drawings below.
+ *
  * The player slime is drawn after the Monster Merge "LV 1 Slime" reference:
  * translucent lime-green jelly, glowing yellow-green eyes, jagged open mouth,
  * floating inner bubbles. (Placeholder until a transparent sprite of the original art is supplied.)
@@ -284,6 +292,7 @@ function makeSoftCircle(scene: Phaser.Scene, key: string, size: number, inner: s
 }
 
 function makeFood(scene: Phaser.Scene): void {
+  if (scene.textures.exists('food0') && scene.textures.exists('foodBig')) return; // sprite art loaded
   const colors = [
     ['#fff1a8', '#ffcf3d'],
     ['#b6fbff', '#3fd7ff'],
@@ -347,6 +356,7 @@ function makeFood(scene: Phaser.Scene): void {
 }
 
 function makeFloor(scene: Phaser.Scene): void {
+  if (scene.textures.exists('floor')) return;
   const S = 256;
   const ctx = canvasTex(scene, 'floor', S, S);
   ctx.fillStyle = '#1c1229';
@@ -393,6 +403,7 @@ function makeFloor(scene: Phaser.Scene): void {
 
 /** Decorations: 0 crystal cluster, 1 glowing mushrooms, 2 rune circle, 3 rubble, 4 bones */
 function makeDecor(scene: Phaser.Scene): void {
+  if (scene.textures.exists('decor0')) return;
   const S = 128;
   // 0 crystals
   let ctx = canvasTex(scene, 'decor0', S, S);
@@ -558,6 +569,7 @@ function makeSlimes(scene: Phaser.Scene): void {
   }
 
   for (let v = 0; v < ENEMY_VARIANTS; v++) {
+    if (scene.textures.exists(`slimeEnemy${v}`)) continue; // sprite art loaded
     const p = ENEMY_PALETTES[v % ENEMY_PALETTES.length];
     ctx = canvasTex(scene, `slimeEnemy${v}`, SLIME_TEX, SLIME_TEX);
     ctx.scale(SLIME_TEX / DRAW_TEX, SLIME_TEX / DRAW_TEX);

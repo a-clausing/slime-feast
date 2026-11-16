@@ -59,5 +59,5 @@ Key implementation notes:
 ## Art & audio
 
 - The menu art and app icons are cropped from the supplied Monster Merge "LV 1 Slime" artwork.
-- **In-game sprites are procedural placeholders** drawn in the style of that slime. They are not final art. Supplying a transparent-background sprite of the Slime (and enemy monsters) will allow them to be swapped in via `src/game/textures.ts`.
+- **All in-game art** (player, 6 enemies, gems, decorations, floor) is supplied sprite art in `public/sprites/`, cut out from magenta/green backgrounds and sized to each hitbox. The procedural drawings in `src/game/textures.ts` are only a fallback if a sprite fails to load.
 - All sound effects are synthesized at runtime (no audio files, no licensing).
