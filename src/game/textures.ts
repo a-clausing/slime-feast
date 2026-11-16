@@ -8,8 +8,12 @@ import { ENEMY_VARIANTS } from '../core/world';
  * floating inner bubbles. (Placeholder until a transparent sprite of the original art is supplied.)
  */
 
-export const SLIME_TEX = 256; // texture size; body radius = SLIME_BODY_R
-export const SLIME_BODY_R = 104;
+/** Slime textures are 512px; the hitbox circle maps to SLIME_BODY_R px of texture. */
+export const SLIME_TEX = 512;
+export const SLIME_BODY_R = 208;
+/** Procedural drawing happens in a 256-unit space and is scaled 2x onto the 512 canvas. */
+const DRAW_TEX = 256;
+const DRAW_R = 104;
 
 interface Palette {
   light: string;
@@ -69,8 +73,8 @@ function blobPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: numb
 }
 
 function drawBody(ctx: CanvasRenderingContext2D, p: Palette, seed: number, translucent: boolean): void {
-  const c = SLIME_TEX / 2;
-  const r = SLIME_BODY_R;
+  const c = DRAW_TEX / 2;
+  const r = DRAW_R;
   // body fill
   blobPath(ctx, c, c, r, 4, seed);
   const g = ctx.createRadialGradient(c - r * 0.35, c - r * 0.45, r * 0.1, c, c + r * 0.1, r * 1.1);
@@ -160,8 +164,8 @@ function glowEye(ctx: CanvasRenderingContext2D, x: number, y: number, rx: number
 }
 
 function playerFace(ctx: CanvasRenderingContext2D): void {
-  const c = SLIME_TEX / 2;
-  const r = SLIME_BODY_R;
+  const c = DRAW_TEX / 2;
+  const r = DRAW_R;
   // two big glowing eyes + small side eyes, like the reference
   glowEye(ctx, c - r * 0.36, c - r * 0.12, r * 0.15, r * 0.17, PLAYER, -0.15);
   glowEye(ctx, c + r * 0.3, c - r * 0.16, r * 0.17, r * 0.19, PLAYER, 0.1);
@@ -205,8 +209,8 @@ function playerFace(ctx: CanvasRenderingContext2D): void {
 }
 
 function enemyFace(ctx: CanvasRenderingContext2D, p: Palette, kind: number): void {
-  const c = SLIME_TEX / 2;
-  const r = SLIME_BODY_R;
+  const c = DRAW_TEX / 2;
+  const r = DRAW_R;
   ctx.lineCap = 'round';
   if (kind === 0) {
     // angry slanted eyes with pupils + fangs
@@ -542,14 +546,21 @@ function makeDecor(scene: Phaser.Scene): void {
 }
 
 function makeSlimes(scene: Phaser.Scene): void {
-  let ctx = canvasTex(scene, 'slimePlayer', SLIME_TEX, SLIME_TEX);
-  drawBody(ctx, PLAYER, 1.3, true);
-  playerFace(ctx);
-  refresh(scene, 'slimePlayer');
+  let ctx: CanvasRenderingContext2D;
+  // Player: the supplied top-down Slime sprite (public/sprites/slime-player.png), loaded in preload().
+  // Fallback to the procedural placeholder if it failed to load.
+  if (!scene.textures.exists('slimePlayer')) {
+    ctx = canvasTex(scene, 'slimePlayer', SLIME_TEX, SLIME_TEX);
+    ctx.scale(SLIME_TEX / DRAW_TEX, SLIME_TEX / DRAW_TEX);
+    drawBody(ctx, PLAYER, 1.3, true);
+    playerFace(ctx);
+    refresh(scene, 'slimePlayer');
+  }
 
   for (let v = 0; v < ENEMY_VARIANTS; v++) {
     const p = ENEMY_PALETTES[v % ENEMY_PALETTES.length];
     ctx = canvasTex(scene, `slimeEnemy${v}`, SLIME_TEX, SLIME_TEX);
+    ctx.scale(SLIME_TEX / DRAW_TEX, SLIME_TEX / DRAW_TEX);
     drawBody(ctx, p, v * 2.1, false);
     enemyFace(ctx, p, v % 3);
     refresh(scene, `slimeEnemy${v}`);

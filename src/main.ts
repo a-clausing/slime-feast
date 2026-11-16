@@ -25,7 +25,7 @@ const game = new Phaser.Game({
   width: initial.w * ratio,
   height: initial.h * ratio,
   scale: { mode: Phaser.Scale.NONE, zoom: 1 / ratio },
-  render: { antialias: true, powerPreference: 'high-performance', roundPixels: false },
+  render: { antialias: true, powerPreference: 'high-performance', roundPixels: false, mipmapFilter: 'LINEAR_MIPMAP_LINEAR' },
   input: { keyboard: false, mouse: false, touch: false, gamepad: false },
   audio: { noAudio: true },
   banner: false,

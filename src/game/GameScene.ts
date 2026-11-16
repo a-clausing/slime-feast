@@ -4,7 +4,7 @@ import { generateDecor } from '../core/arena';
 import { canConsume, radiusForMass } from '../core/mass';
 import type { GameEvent, Slime } from '../core/types';
 import type { World } from '../core/world';
-import { ENEMY_TINTS, PLAYER_TINT, SLIME_BODY_R, SLIME_TEX, generateTextures } from './textures';
+import { ENEMY_TINTS, PLAYER_TINT, SLIME_BODY_R, generateTextures } from './textures';
 
 interface SlimeView {
   id: number;
@@ -80,6 +80,11 @@ export class GameScene extends Phaser.Scene {
 
   setHost(h: RenderHost): void {
     this.host = h;
+  }
+
+  preload(): void {
+    // Relative path so it resolves under the GitHub Pages base path.
+    this.load.image('slimePlayer', 'sprites/slime-player.png');
   }
 
   create(): void {
@@ -328,7 +333,7 @@ export class GameScene extends Phaser.Scene {
           .setVisible(true)
           .setPosition(x, y)
           .setRotation(t * 0.6)
-          .setScale(((v.dispR + 14) * 2) / (SLIME_TEX - 16))
+          .setScale(((v.dispR + 14) * 2) / 240)
           .setTint(threat ? 0xff4040 : 0xffffff)
           .setAlpha(threat ? 0.6 + 0.4 * Math.sin(t * 12) : 0.75);
       }
