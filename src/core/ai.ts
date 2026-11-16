@@ -15,7 +15,7 @@ export function wrapAngle(a: number): number {
 export function modeSpeed(mode: Slime['mode']): number {
   switch (mode) {
     case 'flee':
-      return 1;
+      return CONFIG.AI_FLEE_SPEED;
     case 'hunt':
       return 1;
     case 'forage':

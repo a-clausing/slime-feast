@@ -281,7 +281,7 @@ export class App implements RenderHost {
     if (!a) return;
     if (this.tutorialStage === 0 && (Math.abs(this.controls.input.x) + Math.abs(this.controls.input.y) > 0.2)) {
       this.tutorialStage = 1;
-      this.hint('Eat gems and smaller slimes to grow', 4.5);
+      this.hint('Chase green-glowing slimes and gems to grow', 4.5);
     } else if (this.tutorialStage === 1 && this.hintTimer <= 0) {
       this.tutorialStage = 2;
       this.hint('Avoid slimes with a red glow — they can eat you!', 4);

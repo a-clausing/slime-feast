@@ -578,6 +578,10 @@ button {
 .howto p {
   margin: 6px 0;
 }
+.howto .green {
+  color: #8dff4f;
+  font-weight: 800;
+}
 .howto .red {
   color: #ff6a6a;
   font-weight: 800;

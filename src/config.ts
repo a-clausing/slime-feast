@@ -95,7 +95,12 @@ export const CONFIG = {
   AI_DETECT_BASE: 260,
   AI_DETECT_RADIUS_MULT: 3,
   /** Threats are noticed at this multiple of the detection range. */
-  AI_FLEE_RANGE_MULT: 0.75,
+  AI_FLEE_RANGE_MULT: 0.5,
+  /**
+   * Fleeing creatures run at this fraction of their top speed. Smaller = faster, so without
+   * this, prey would always outrun the player; 0.72 makes a determined chase succeed.
+   */
+  AI_FLEE_SPEED: 0.72,
   /** Max turn rate (radians / s). */
   AI_TURN_RATE: 4.2,
   AI_WALL_MARGIN: 140,

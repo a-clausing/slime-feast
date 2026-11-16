@@ -333,10 +333,16 @@ export class GameScene extends Phaser.Scene {
           .setAlpha(threat ? 0.6 + 0.4 * Math.sin(t * 12) : 0.75);
       }
       // threat aura on enemies that could eat the controlled slime
+      // red glow = can eat you; soft green glow = you can eat it; none = same-size (bump)
       if (s.kind === 'enemy') {
         const danger = activeMass > 0 && canConsume(s.mass, activeMass);
-        v.aura.setVisible(danger);
-        if (danger) v.aura.setPosition(x, y).setScale((v.dispR * 3.3) / 128).setAlpha(0.6 + 0.2 * Math.sin(t * 5 + v.phase));
+        const edible = !danger && activeMass > 0 && canConsume(activeMass, s.mass);
+        v.aura.setVisible(danger || edible);
+        if (danger) {
+          v.aura.setTint(0xff2a3a).setPosition(x, y).setScale((v.dispR * 3.3) / 128).setAlpha(0.6 + 0.2 * Math.sin(t * 5 + v.phase));
+        } else if (edible) {
+          v.aura.setTint(0x8dff4f).setPosition(x, y).setScale((v.dispR * 2.8) / 128).setAlpha(0.32 + 0.08 * Math.sin(t * 3 + v.phase));
+        }
       }
       if (v.label) {
         const txt = String(Math.floor(s.mass));
