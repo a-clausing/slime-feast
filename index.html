@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#140b20" />
+    <meta name="description" content="Slime Feast — eat, split, survive. A mobile arcade game." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Slime Feast" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <title>Slime Feast</title>
+  </head>
+  <body>
+    <div id="app">
+      <div id="game"></div>
+      <div id="vignette"></div>
+
+      <!-- ───────── Gameplay HUD ───────── -->
+      <div id="hud" class="hidden">
+        <div class="hud-top">
+          <div class="hud-stat">
+            <span class="hud-label">SCORE</span>
+            <span id="hud-score" class="hud-value">0</span>
+          </div>
+          <div class="hud-stat hud-mass">
+            <span class="hud-label">MASS</span>
+            <span id="hud-mass" class="hud-value">25</span>
+            <span id="hud-home-mass" class="hud-sub hidden">⌂ 0</span>
+          </div>
+          <div class="hud-stat">
+            <span class="hud-label">TIME</span>
+            <span id="hud-time" class="hud-value">0:00</span>
+          </div>
+          <button id="btn-pause" class="icon-btn" aria-label="Pause">
+            <svg viewBox="0 0 24 24" width="22" height="22"><rect x="6" y="5" width="4" height="14" rx="1.5" /><rect x="14" y="5" width="4" height="14" rx="1.5" /></svg>
+          </button>
+        </div>
+        <div id="hint" class="hint hidden"></div>
+      </div>
+
+      <div id="touch-zone"></div>
+      <div id="joystick" class="hidden"><div id="joystick-knob"></div></div>
+
+      <button id="btn-split" class="split-btn hidden" aria-label="Split">
+        <span class="split-icon">
+          <svg viewBox="0 0 48 48" width="40" height="40"><circle cx="17" cy="26" r="11" /><circle cx="35" cy="20" r="8" /></svg>
+        </span>
+        <span class="split-text">SPLIT</span>
+        <span id="split-need" class="split-need">100</span>
+      </button>
+
+      <div id="home-indicator" class="hidden">
+        <div class="hi-arrow"></div>
+        <div class="hi-body"><span class="hi-icon">⌂</span><span id="hi-dist">0m</span></div>
+      </div>
+
+      <!-- ───────── Main menu ───────── -->
+      <section id="screen-menu" class="screen">
+        <div class="menu-inner">
+          <h1 class="title"><span class="t1">SLIME</span><span class="t2">FEAST</span></h1>
+          <p class="subtitle">Eat. Split. Survive.</p>
+          <div class="hero">
+            <div class="hero-glow"></div>
+            <img src="slime-hero.png" alt="Green Slime" class="hero-img" draggable="false" />
+          </div>
+          <button id="btn-play" class="btn btn-primary btn-big">PLAY</button>
+          <button id="btn-continue" class="btn btn-secondary hidden">CONTINUE RUN</button>
+          <div class="menu-high">BEST <span id="menu-high">0</span></div>
+        </div>
+        <button id="btn-settings" class="icon-btn corner-btn" aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.9 4.6-.1-1.1 2-1.6-2-3.4-2.4.9a8 8 0 0 0-1.9-1.1L16 4.2h-4l-.5 2.6c-.7.3-1.3.6-1.9 1.1l-2.4-.9-2 3.4 2 1.6a8 8 0 0 0 0 2.2l-2 1.6 2 3.4 2.4-.9c.6.5 1.2.8 1.9 1.1l.5 2.6h4l.5-2.6c.7-.3 1.3-.6 1.9-1.1l2.4.9 2-3.4-2-1.6.1-1.1Z" /></svg>
+        </button>
+      </section>
+
+      <!-- ───────── Settings ───────── -->
+      <section id="screen-settings" class="screen modal hidden">
+        <div class="panel">
+          <h2>SETTINGS</h2>
+          <button id="btn-sound-settings" class="btn btn-secondary toggle">SOUND: ON</button>
+          <div class="howto">
+            <h3>HOW TO PLAY</h3>
+            <p>Drag anywhere on the left side to move.</p>
+            <p>Eat gems and creatures less than <b>5/6 your size</b>. Avoid anything with a <span class="red">red glow</span>.</p>
+            <p>At <b>100 mass</b>, tap <b>SPLIT</b>: 60% stays put, 40% goes hunting faster. Touch your stationary half to merge again.</p>
+          </div>
+          <button id="btn-reset-records" class="btn btn-ghost">Reset records</button>
+          <button id="btn-settings-close" class="btn btn-primary">DONE</button>
+        </div>
+      </section>
+
+      <!-- ───────── Pause ───────── -->
+      <section id="screen-pause" class="screen modal hidden">
+        <div class="panel">
+          <h2>PAUSED</h2>
+          <button id="btn-resume" class="btn btn-primary btn-big">RESUME</button>
+          <button id="btn-restart" class="btn btn-secondary">RESTART</button>
+          <button id="btn-pause-menu" class="btn btn-secondary">MAIN MENU</button>
+          <button id="btn-sound-pause" class="btn btn-ghost toggle">SOUND: ON</button>
+        </div>
+      </section>
+
+      <!-- ───────── Game over ───────── -->
+      <section id="screen-gameover" class="screen modal hidden">
+        <div class="panel">
+          <h2 class="go-title">GAME OVER</h2>
+          <div id="go-newhigh" class="newhigh hidden">NEW HIGH SCORE!</div>
+          <div class="go-score"><span id="go-score">0</span><small>SCORE</small></div>
+          <div class="stats">
+            <div><span>High score</span><b id="go-high">0</b></div>
+            <div><span>Survived</span><b id="go-time">0:00</b></div>
+            <div><span>Best mass</span><b id="go-mass">0</b></div>
+            <div><span>Creatures eaten</span><b id="go-eaten">0</b></div>
+            <div><span>Splits used</span><b id="go-splits">0</b></div>
+          </div>
+          <button id="btn-again" class="btn btn-primary btn-big">PLAY AGAIN</button>
+          <button id="btn-go-menu" class="btn btn-secondary">MAIN MENU</button>
+        </div>
+      </section>
+
+      <div id="rotate-overlay" class="hidden">
+        <div class="rotate-phone"></div>
+        <p>Rotate your device</p>
+        <small>Your run is paused and safe.</small>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
