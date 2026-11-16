@@ -381,7 +381,7 @@ describe('difficulty', () => {
     }
     expect(pressureAt(10).phase).toBe('feeding');
     expect(pressureAt(60).phase).toBe('hunting');
-    expect(pressureAt(120).phase).toBe('survival');
+    expect(pressureAt(100).phase).toBe('survival');
     expect(pressureAt(200).phase).toBe('endless');
   });
 });

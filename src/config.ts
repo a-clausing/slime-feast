@@ -31,9 +31,9 @@ export const CONFIG = {
   CONSUME_EPSILON: 1e-9,
   /**
    * Required overlap: prey is eaten when centre distance <= R - r * CONSUME_OVERLAP.
-   * 0.4 means 40% of the prey radius must already be inside the predator's rim.
+   * 0.1: the prey's centre (plus a 10% margin) must be inside the predator — an edge brush never counts.
    */
-  CONSUME_OVERLAP: 0.4,
+  CONSUME_OVERLAP: 0.1,
   /** Fraction of overlap removed per step when two slimes can't eat each other. */
   BUMP_STRENGTH: 0.5,
 
@@ -72,14 +72,14 @@ export const CONFIG = {
   FOOD_BIG_RADIUS: 10,
 
   // ── Enemies ─────────────────────────────────────────────────
-  ENEMY_COUNT_START: 24,
-  ENEMY_COUNT_MAX: 50,
+  ENEMY_COUNT_START: 26,
+  ENEMY_COUNT_MAX: 56,
   /** Hard cap for mobile performance. */
-  ENEMY_HARD_CAP: 56,
+  ENEMY_HARD_CAP: 60,
   ENEMY_MIN_MASS: 8,
   /** Enemies move at this fraction of the shared speed formula. */
-  ENEMY_SPEED_FACTOR: 0.84,
-  ENEMY_SPEED_FACTOR_MAX: 0.97,
+  ENEMY_SPEED_FACTOR: 0.87,
+  ENEMY_SPEED_FACTOR_MAX: 1.0,
   /** Spawn clearance from any player portion = view radius estimate + this. */
   ENEMY_SPAWN_CLEARANCE: 520,
   /** Large predators spawn at least this far from the player at run start. */
@@ -103,9 +103,9 @@ export const CONFIG = {
   AI_HOME_INTEREST: 0.6,
 
   // ── Difficulty (seconds) ────────────────────────────────────
-  PHASE_HUNT: 30,
-  PHASE_SURVIVAL: 90,
-  PHASE_ENDLESS: 180,
+  PHASE_HUNT: 25,
+  PHASE_SURVIVAL: 75,
+  PHASE_ENDLESS: 150,
   /** After PHASE_ENDLESS, pressure keeps rising at this rate per minute (asymptotic). */
   ENDLESS_RAMP_PER_MIN: 0.3,
 
