@@ -13,7 +13,7 @@
  */
 
 /** Overall music level (sound effects play at ~0.55). Kept low so the music sits under the action. */
-const MUSIC_VOLUME = 0.14;
+const MUSIC_VOLUME = 0.05;
 
 const BPM = 128;
 const STEP = 60 / BPM / 4; // 16th note
@@ -57,10 +57,9 @@ export class Music {
     this.ctx = ctx;
     this.out = ctx.createGain();
     this.out.gain.value = this.muted ? 0 : MUSIC_VOLUME;
-    const comp = ctx.createDynamicsCompressor(); // glue + loudness, keeps peaks safe
-    comp.threshold.value = -18;
-    comp.ratio.value = 4;
-    this.out.connect(comp).connect(destination);
+    // ducking stage: briefly dips the music under sound effects
+    this.duckGain = ctx.createGain();
+    this.out.connect(this.duckGain).connect(destination);
     const mk = (v: number) => {
       const g = ctx.createGain();
       g.gain.value = v;
@@ -95,6 +94,20 @@ export class Music {
     lp.Q.value = 0.8;
     ws.connect(lp).connect(dest);
     return ws;
+  }
+
+  private duckGain: GainNode | null = null;
+
+  /** Dip the music for a moment so a sound effect cuts through (sidechain-style). */
+  duck(amount = 0.35, hold = 0.25): void {
+    if (!this.duckGain || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const g = this.duckGain.gain;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(Math.min(1, g.value), t);
+    g.linearRampToValueAtTime(amount, t + 0.03);
+    g.setValueAtTime(amount, t + hold);
+    g.linearRampToValueAtTime(1, t + hold + 0.35);
   }
 
   setMuted(m: boolean): void {

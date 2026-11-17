@@ -23,7 +23,7 @@ export class Sfx {
         if (!AC) return;
         this.ctx = new AC();
         this.master = this.ctx.createGain();
-        this.master.gain.value = this.muted ? 0 : 0.55;
+        this.master.gain.value = this.muted ? 0 : 0.9;
         this.master.connect(this.ctx.destination);
         this.music.attach(this.ctx, this.ctx.destination);
       }
@@ -35,7 +35,7 @@ export class Sfx {
 
   setMuted(m: boolean): void {
     this.muted = m;
-    if (this.master && this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.55, this.ctx.currentTime, 0.02);
+    if (this.master && this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.02);
   }
 
   suspend(): void {
@@ -97,21 +97,39 @@ export class Sfx {
     const now = performance.now();
     if (now - this.lastFood < 45) return; // avoid buzzing when vacuuming many pellets
     this.lastFood = now;
+    this.music.duck(0.7, 0.08);
     const base = big ? 660 : 880 + Math.random() * 300;
     this.tone('sine', base, base * 1.6, big ? 0.16 : 0.08, big ? 0.22 : 0.12);
   }
+  /** You got eaten: big wet CHOMP + squelch, and the music ducks hard. */
+  eaten(): void {
+    this.music.duck(0.15, 0.6);
+    // jaw snap
+    this.noise(0.08, 0.6, 2400, 1.2);
+    this.tone('square', 220, 60, 0.12, 0.25);
+    // body crunch
+    this.noise(0.25, 0.45, 600, 0.9, 0.05);
+    this.tone('sawtooth', 160, 40, 0.35, 0.3, 0.05);
+    // squelchy swallow
+    this.tone('sine', 420, 90, 0.4, 0.3, 0.18);
+    this.noise(0.3, 0.25, 350, 2, 0.2);
+  }
+
   gulp(size: number): void {
+    this.music.duck(0.5, 0.15);
     const f = Math.max(90, 320 - size * 0.4);
     this.tone('sine', f * 1.6, f * 0.6, 0.22, 0.35);
     this.tone('triangle', f * 0.8, f * 0.4, 0.18, 0.2, 0.04);
     this.noise(0.12, 0.15, 500, 2);
   }
   split(): void {
+    this.music.duck(0.5, 0.2);
     this.noise(0.25, 0.25, 900, 0.8);
     this.tone('sine', 520, 200, 0.25, 0.28);
     this.tone('sine', 300, 700, 0.18, 0.15, 0.06);
   }
   recombine(): void {
+    this.music.duck(0.5, 0.25);
     this.tone('sine', 330, 660, 0.18, 0.25);
     this.tone('sine', 495, 990, 0.22, 0.2, 0.08);
     this.tone('triangle', 660, 1320, 0.3, 0.16, 0.16);
@@ -121,6 +139,7 @@ export class Sfx {
     this.noise(0.3, 0.2, 300, 1);
   }
   gameOver(): void {
+    this.music.duck(0.2, 1.2);
     [392, 330, 262, 196].forEach((f, i) => this.tone('triangle', f, f * 0.98, 0.32, 0.22, i * 0.17));
   }
   button(): void {

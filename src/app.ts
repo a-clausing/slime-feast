@@ -270,6 +270,7 @@ export class App implements RenderHost {
           break;
         case 'eat':
           if (e.byPlayer) this.sfx.gulp(e.mass);
+          else if (e.preyKind !== 'enemy') this.sfx.eaten(); // one of your portions got eaten
           break;
         case 'recombine':
           this.sfx.recombine();
