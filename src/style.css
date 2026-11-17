@@ -41,42 +41,7 @@ body {
   overflow: hidden;
 }
 
-/*
- * iOS home-screen apps with a black-translucent status bar shift the page up by the status-bar
- * height, so anything sized to the viewport (fixed, 100%, 100vh) stops short at the bottom.
- * Known fix: make the document taller by env(safe-area-inset-top) and lay the game out in the
- * document (absolute) instead of pinning it to the viewport (fixed).
- */
-@media (display-mode: standalone) {
-  html {
-    height: calc(100% + env(safe-area-inset-top));
-    min-height: calc(100% + env(safe-area-inset-top));
-  }
-  body {
-    height: 100%;
-  }
-  #app {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-}
-html.ios-standalone {
-  height: calc(100% + env(safe-area-inset-top));
-  min-height: calc(100% + env(safe-area-inset-top));
-}
-html.ios-standalone body {
-  height: 100%;
-}
-html.ios-standalone #app {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
+
 
 #game,
 #game canvas {

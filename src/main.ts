@@ -19,16 +19,8 @@ function isStandalone(): boolean {
     window.matchMedia('(display-mode: standalone)').matches
   );
 }
-function fitAppToScreen(): void {
-  // CSS handles the layout (see html.ios-standalone in style.css); this just flags the mode
-  // for iOS, whose `navigator.standalone` is more reliable than the display-mode media query.
-  document.documentElement.classList.toggle('ios-standalone', isStandalone());
-  window.scrollTo(0, 0);
-}
-
 /** Size of the game container (#app). */
 function viewport(): { w: number; h: number } {
-  fitAppToScreen();
   const r = document.getElementById('app')!.getBoundingClientRect();
   const w = Math.round(r.width) || window.innerWidth;
   const h = Math.round(r.height) || window.innerHeight;
@@ -66,6 +58,27 @@ scene.setHost(app);
 
 game.events.once('scene-ready', () => {
   app.boot();
+  // iOS may throw away the WebGL context while the app is in the background. Objects drawn
+  // once (floor, decorations) then show Phaser's green "missing texture" grid. Save the run
+  // and reload — it restores paused, with every texture rebuilt.
+  const canvas = game.canvas;
+  let reloading = false;
+  const recover = () => {
+    if (reloading) return;
+    reloading = true;
+    app.persist();
+    window.location.reload();
+  };
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    app.persist();
+  });
+  canvas.addEventListener('webglcontextrestored', recover);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    const gl = (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).gl;
+    if (gl && gl.isContextLost()) recover();
+  });
   // expose a tiny hook for automated browser QA
   (window as unknown as { __slimeFeast: unknown }).__slimeFeast = { app, scene, game };
 });
