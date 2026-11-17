@@ -8,9 +8,12 @@ function dpr(): number {
   return Math.min(window.devicePixelRatio || 1, CONFIG.MAX_DPR);
 }
 
+/** Size of the game container (#app), which CSS sizes to the full screen incl. iOS standalone. */
 function viewport(): { w: number; h: number } {
-  const vv = window.visualViewport;
-  return { w: Math.round(vv?.width ?? window.innerWidth), h: Math.round(vv?.height ?? window.innerHeight) };
+  const r = document.getElementById('app')!.getBoundingClientRect();
+  const w = Math.round(r.width) || window.innerWidth;
+  const h = Math.round(r.height) || window.innerHeight;
+  return { w, h };
 }
 
 const scene = new GameScene();
@@ -59,6 +62,9 @@ function onResize(): void {
 window.addEventListener('resize', onResize);
 window.addEventListener('orientationchange', onResize);
 window.visualViewport?.addEventListener('resize', onResize);
+// catches iOS standalone launch where the container settles to full height after first paint
+new ResizeObserver(onResize).observe(document.getElementById('app')!);
+window.addEventListener('pageshow', onResize);
 
 // prevent iOS double-tap zoom / pinch zoom / long-press menus
 document.addEventListener('gesturestart', (e) => e.preventDefault());
