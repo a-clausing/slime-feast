@@ -6,6 +6,7 @@ const FULL_SPEED_AT = 0.55; // fraction of radius at which input reaches full ma
 
 /**
  * Floating virtual joystick (left touch zone) + keyboard (WASD / arrows).
+ * The stick appears where the thumb lands and stays fixed there until release.
  * Uses Pointer Events with per-pointer tracking, so the joystick and the SPLIT
  * button can be held simultaneously (multi-touch).
  */
@@ -113,20 +114,13 @@ export class Controls {
   private move = (e: PointerEvent): void => {
     if (e.pointerId !== this.joyId) return;
     e.preventDefault();
-    let dx = e.clientX - this.ox;
-    let dy = e.clientY - this.oy;
-    let len = Math.hypot(dx, dy);
-    // floating base: if the finger goes past the rim, drag the base along
-    if (len > JOY_RADIUS) {
-      const over = len - JOY_RADIUS;
-      this.ox += (dx / len) * over;
-      this.oy += (dy / len) * over;
-      this.base.style.left = `${this.ox}px`;
-      this.base.style.top = `${this.oy}px`;
-      dx = e.clientX - this.ox;
-      dy = e.clientY - this.oy;
-      len = JOY_RADIUS;
-    }
+    const dx0 = e.clientX - this.ox;
+    const dy0 = e.clientY - this.oy;
+    const raw = Math.hypot(dx0, dy0);
+    // The base stays frozen where the thumb first touched; the knob just stops at the rim.
+    const len = Math.min(raw, JOY_RADIUS);
+    const dx = raw > 0 ? (dx0 / raw) * len : 0;
+    const dy = raw > 0 ? (dy0 / raw) * len : 0;
     this.knob.style.transform = `translate(${dx}px, ${dy}px)`;
     const f = len / JOY_RADIUS;
     if (f < DEAD_ZONE) {
