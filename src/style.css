@@ -398,7 +398,7 @@ button {
   position: relative;
   width: min(66vw, 280px, 30vh * 1.6);
   aspect-ratio: 640 / 399;
-  margin: 10px 0 22px;
+  margin: 26px 0 26px;
 }
 .hero-glow {
   position: absolute;
