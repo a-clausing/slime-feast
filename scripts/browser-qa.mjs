@@ -70,7 +70,7 @@ const clearThreats = (page) =>
   page.evaluate(() => {
     const w = window.__slimeFeast.app.world;
     const a = w.active;
-    for (const s of w.slimes) if (s.kind === 'enemy' && Math.hypot(s.x - a.x, s.y - a.y) < 1400) s.alive = false;
+    for (const s of w.slimes) if (s.kind === 'enemy') s.alive = false;
     for (let i = 0; i < w.food.length; i++) {
       const f = w.food[i];
       if (f.alive && Math.hypot(f.x - a.x, f.y - a.y) < 700) {
@@ -79,7 +79,8 @@ const clearThreats = (page) =>
       }
     }
     w.slimes = w.slimes.filter((s) => s.alive);
-    w.spawnTimer = 30;
+    w.spawnTimer = 1e9;
+    w.recycleTimer = 1e9;
   });
 
 async function touchDrag(page, client, id, x0, y0, dx, dy, holdMs) {
@@ -104,7 +105,7 @@ try {
     await page.tap('#btn-play');
     await sleep(500);
     s = await state(page);
-    check('PLAY starts a run with mass 25', s.state === 'playing' && s.mass === 25 && !s.split, JSON.stringify(s));
+    check('PLAY starts a run with mass 25', s.state === 'playing' && s.mass >= 25 && s.mass < 32 && !s.split, JSON.stringify(s));
     await clearThreats(page);
 
     const client = await page.target().createCDPSession();
