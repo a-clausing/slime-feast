@@ -322,6 +322,8 @@ export class GameScene extends Phaser.Scene {
     const active = w.active;
     const home = w.home;
     const activeMass = active?.mass ?? 0;
+    const hunterMass =
+      !active ? 0 : w.isSplit || active.mass < CONFIG.MIN_SPLIT_MASS ? active.mass : active.mass * (1 - CONFIG.SPLIT_STATIONARY_RATIO);
 
     // home threat (for warning ring + HUD indicator)
     this.homeThreat = false;
@@ -394,10 +396,11 @@ export class GameScene extends Phaser.Scene {
           .setAlpha(threat ? 0.6 + 0.4 * Math.sin(t * 12) : 0.75);
       }
       // threat aura on enemies that could eat the controlled slime
-      // red glow = can eat you; soft green glow = you can eat it; none = same-size (bump)
+      // red = can eat you; green = your hunter could eat it (the 40% portion if you split now,
+      // or your current hunter while split; before you can split, anything you can eat); else none
       if (s.kind === 'enemy') {
         const danger = activeMass > 0 && canConsume(s.mass, activeMass);
-        const edible = !danger && activeMass > 0 && canConsume(activeMass, s.mass);
+        const edible = !danger && hunterMass > 0 && canConsume(hunterMass, s.mass);
         v.aura.setVisible(danger || edible);
         if (danger) {
           v.aura.setTint(0xff2a3a).setPosition(x, y).setScale((v.dispR * 3.3) / 128).setAlpha(0.6 + 0.2 * Math.sin(t * 5 + v.phase));
