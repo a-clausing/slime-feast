@@ -1,6 +1,7 @@
 import { CONFIG } from './config';
 import type { GameEvent } from './core/types';
 import { World } from './core/world';
+import { canConsume, radiusForMass } from './core/mass';
 import { clearRun, loadMeta, loadRun, saveMeta, saveRun, type MetaSave } from './core/save';
 import type { GameScene, RenderHost } from './game/GameScene';
 import { Sfx } from './audio/sfx';
@@ -42,6 +43,8 @@ export class App implements RenderHost {
 
   constructor(private scene: GameScene) {
     this.sfx.setMuted(this.meta.muted);
+    this.sfx.music.setMuted(this.meta.musicOff);
+    this.sfx.music.play();
     this.controls = new Controls($('touch-zone'), $('joystick'), $('joystick-knob'), $('btn-split'));
     this.controls.onSplit = () => this.split();
     this.controls.onPauseKey = () => {
@@ -202,6 +205,11 @@ export class App implements RenderHost {
 
   tick(deltaMs: number): number {
     const w = this.world;
+    this.musicTimer -= deltaMs;
+    if (this.musicTimer <= 0) {
+      this.musicTimer = 250;
+      this.updateMusic(w);
+    }
     if (!w) return 1;
     const dt = CONFIG.SIM_DT;
     if (this.state === 'playing' || this.state === 'menu') {
@@ -304,6 +312,7 @@ export class App implements RenderHost {
     if (navigator.vibrate) navigator.vibrate([20, 40, 20, 40, 60]);
   }
   private bannerTimer = 0;
+  private musicTimer = 0;
 
   private tutorial(w: World, dt: number): void {
     if (this.hintTimer > 0) {
@@ -403,6 +412,8 @@ export class App implements RenderHost {
     this.btn('btn-settings-close', () => this.el.settings.classList.add('hidden'));
     this.btn('btn-sound-settings', () => this.toggleSound());
     this.btn('btn-sound-pause', () => this.toggleSound());
+    this.btn('btn-music-settings', () => this.toggleMusic());
+    this.btn('btn-music-pause', () => this.toggleMusic());
     this.btn('btn-reset-records', () => {
       if (!confirm('Reset all your records?')) return;
       this.meta.bestFinal = 0;
@@ -418,11 +429,45 @@ export class App implements RenderHost {
   private toggleSound(): void {
     this.meta.muted = !this.meta.muted;
     this.sfx.setMuted(this.meta.muted);
+    this.sfx.music.setMuted(this.meta.musicOff);
+    this.sfx.music.play();
     saveMeta(this.meta);
     this.refreshSoundLabels();
   }
 
+  private toggleMusic(): void {
+    this.meta.musicOff = !this.meta.musicOff;
+    this.sfx.music.setMuted(this.meta.musicOff);
+    saveMeta(this.meta);
+    this.refreshSoundLabels();
+  }
+
+  /** Music intensity: calm on menus/pause, groove while playing, danger layer when threatened. */
+  private updateMusic(w: World | null): void {
+    let level = 0;
+    if (this.state === 'playing' && w) {
+      level = 1;
+      const a = w.active;
+      if (a) {
+        const ra = radiusForMass(a.mass);
+        const near = 380 * w.tempo;
+        for (const e of w.slimes) {
+          if (e.kind !== 'enemy' || !e.alive || !canConsume(e.mass, a.mass)) continue;
+          if (Math.hypot(e.x - a.x, e.y - a.y) - ra - radiusForMass(e.mass) < near) {
+            level = 2;
+            break;
+          }
+        }
+      }
+      if (this.scene.homeThreat) level = 2;
+    }
+    this.sfx.music.setIntensity(level);
+  }
+
   private refreshSoundLabels(): void {
+    const m = `MUSIC: ${this.meta.musicOff ? 'OFF' : 'ON'}`;
+    $('btn-music-settings').textContent = m;
+    $('btn-music-pause').textContent = m;
     const t = `SOUND: ${this.meta.muted ? 'OFF' : 'ON'}`;
     $('btn-sound-settings').textContent = t;
     $('btn-sound-pause').textContent = t;

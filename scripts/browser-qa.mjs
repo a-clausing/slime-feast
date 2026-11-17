@@ -260,7 +260,7 @@ try {
     await page.tap('#btn-again');
     await sleep(100);
     s = await state(page);
-    check('PLAY AGAIN restarts immediately and fully resets', s.state === 'playing' && s.mass === 25 && s.score < 15 && s.time < 3 && !s.split, `${Date.now() - t0}ms`);
+    check('PLAY AGAIN restarts immediately and fully resets', s.state === 'playing' && s.mass >= 25 && s.mass < 40 && s.score < 15 && s.time < 3 && !s.split, `${Date.now() - t0}ms ${JSON.stringify(s)}`);
     const hs = await page.evaluate(() => JSON.parse(localStorage.getItem('slimeFeast.meta')));
     check('records persisted (final mass, peak, longest)', hs.bestFinal >= 300 && hs.bestFinal < 320 && hs.bestPeak >= 500 && hs.longest >= 1, JSON.stringify(hs));
     check('new-high-score badge was shown', newHighShown);

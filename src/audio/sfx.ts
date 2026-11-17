@@ -3,6 +3,8 @@
  * so there are no licensing concerns and nothing extra to download/cache.
  * The AudioContext is created only after a user gesture (iOS requirement).
  */
+import { Music } from './music';
+
 type Ctx = AudioContext;
 
 export class Sfx {
@@ -10,6 +12,8 @@ export class Sfx {
   private master: GainNode | null = null;
   muted = false;
   private lastFood = 0;
+  /** Background music shares this AudioContext but has its own volume / mute. */
+  readonly music = new Music();
 
   /** Call from a user-gesture handler (pointerdown/keydown). Safe to call repeatedly. */
   unlock(): void {
@@ -21,6 +25,7 @@ export class Sfx {
         this.master = this.ctx.createGain();
         this.master.gain.value = this.muted ? 0 : 0.55;
         this.master.connect(this.ctx.destination);
+        this.music.attach(this.ctx, this.ctx.destination);
       }
       if (this.ctx.state === 'suspended') void this.ctx.resume();
     } catch {

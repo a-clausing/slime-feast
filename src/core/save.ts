@@ -196,6 +196,7 @@ export interface MetaSave {
   /** Longest survival time in seconds. */
   longest: number;
   muted: boolean;
+  musicOff: boolean;
 }
 
 function storage(): Storage | null {
@@ -242,7 +243,7 @@ export function clearRun(): void {
 }
 
 export function loadMeta(): MetaSave {
-  const def: MetaSave = { bestFinal: 0, bestPeak: 0, longest: 0, muted: false };
+  const def: MetaSave = { bestFinal: 0, bestPeak: 0, longest: 0, muted: false, musicOff: false };
   try {
     const raw = storage()?.getItem(META_KEY);
     if (!raw) return def;
@@ -252,6 +253,7 @@ export function loadMeta(): MetaSave {
       bestPeak: Number((m as { bestPeak?: number; bestMass?: number }).bestPeak ?? (m as { bestMass?: number }).bestMass) || 0,
       longest: Number(m.longest) || 0,
       muted: !!m.muted,
+      musicOff: !!m.musicOff,
     };
   } catch {
     return def;
