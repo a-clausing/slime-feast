@@ -502,11 +502,40 @@ export class GameScene extends Phaser.Scene {
     this.applyCamera();
   }
 
+  /** Screen space (css px) covered by the HUD at the top and the SPLIT button at the bottom. */
+  private insetTop = 0;
+  private insetBottom = 0;
+  private insetCheck = 0;
+
+  private measureInsets(): void {
+    const H = window.innerHeight;
+    const hud = document.getElementById('hud');
+    const split = document.getElementById('btn-split');
+    const visible = (el: HTMLElement | null) => !!el && !el.classList.contains('hidden');
+    this.insetTop = visible(hud) ? Math.max(0, hud!.getBoundingClientRect().bottom + 6) : 0;
+    let top = visible(split) ? split!.getBoundingClientRect().top : H;
+    const need = document.getElementById('split-need')?.getBoundingClientRect();
+    if (visible(split) && need && need.height > 0) top = Math.min(top, need.top);
+    // +28px leaves room for the mass label under your slime
+    this.insetBottom = visible(split) ? Math.max(0, H - top + 28) : 0;
+  }
+
   private applyCamera(): void {
     const cam = this.cameras.main;
-    const minZ = Math.max(cam.width / (this.arenaW || CONFIG.WORLD_WIDTH), cam.height / (this.arenaH || CONFIG.WORLD_HEIGHT));
+    const W = this.arenaW || CONFIG.WORLD_WIDTH;
+    const H = this.arenaH || CONFIG.WORLD_HEIGHT;
+    const minZ = Math.max(cam.width / W, cam.height / H);
     if (this.camZoom < minZ) this.camZoom = minZ;
     cam.setZoom(this.camZoom);
+    // Let the camera scroll past the top/bottom walls by the height of the HUD / SPLIT button,
+    // so your slime can always be seen above the button and below the score bar.
+    if (--this.insetCheck <= 0) {
+      this.measureInsets();
+      this.insetCheck = 30;
+    }
+    const padTop = (this.insetTop * this.dpr) / this.camZoom;
+    const padBottom = (this.insetBottom * this.dpr) / this.camZoom;
+    cam.setBounds(0, -padTop, W, H + padTop + padBottom);
     cam.centerOn(this.camX, this.camY);
   }
 
