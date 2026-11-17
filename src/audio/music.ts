@@ -7,10 +7,13 @@
  *
  * Layers fade in with intensity:
  *   0 (menu / paused)   light kick, quiet chugs, sparkly arpeggio
- *   1 (normal play)     full drums, pumping bass, power chords
- *   2 (danger nearby)   + lead riff, crash cymbals, 16th hats
+ *   1 (normal play)     full drums, 16th hats, crashes, risers, pumping bass, power chords
+ *   2 (danger nearby)   + lead guitar riff, harder guitar
  * Notes are scheduled slightly ahead with a look-ahead timer so timing stays tight.
  */
+
+/** Overall music level (sound effects play at ~0.55). Kept low so the music sits under the action. */
+const MUSIC_VOLUME = 0.14;
 
 const BPM = 128;
 const STEP = 60 / BPM / 4; // 16th note
@@ -33,7 +36,7 @@ const ARP = [0, 7, 12, 15, 12, 7, 0, 7, 12, 15, 19, 15, 12, 7, 12, 15];
 
 const mtof = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 
-type LayerName = 'drums' | 'bass' | 'gtr' | 'calm' | 'danger';
+type LayerName = 'drums' | 'bass' | 'gtr' | 'calm' | 'techno' | 'danger';
 
 export class Music {
   private ctx: AudioContext | null = null;
@@ -53,7 +56,7 @@ export class Music {
     if (this.ctx) return;
     this.ctx = ctx;
     this.out = ctx.createGain();
-    this.out.gain.value = this.muted ? 0 : 0.3;
+    this.out.gain.value = this.muted ? 0 : MUSIC_VOLUME;
     const comp = ctx.createDynamicsCompressor(); // glue + loudness, keeps peaks safe
     comp.threshold.value = -18;
     comp.ratio.value = 4;
@@ -64,7 +67,7 @@ export class Music {
       g.connect(this.out!);
       return g;
     };
-    this.layers = { drums: mk(0.35), bass: mk(0.3), gtr: mk(0.25), calm: mk(0.6), danger: mk(0) };
+    this.layers = { drums: mk(0.35), bass: mk(0.3), gtr: mk(0.25), calm: mk(0.6), techno: mk(0), danger: mk(0) };
     this.gtrBus = this.distortion(ctx, 28, 3200, this.layers.gtr);
     this.leadBus = this.distortion(ctx, 18, 4200, this.layers.danger);
 
@@ -96,7 +99,7 @@ export class Music {
 
   setMuted(m: boolean): void {
     this.muted = m;
-    if (this.out && this.ctx) this.out.gain.setTargetAtTime(m ? 0 : 0.3, this.ctx.currentTime, 0.15);
+    if (this.out && this.ctx) this.out.gain.setTargetAtTime(m ? 0 : MUSIC_VOLUME, this.ctx.currentTime, 0.15);
   }
 
   play(): void {
@@ -123,6 +126,7 @@ export class Music {
     set(this.layers.bass, level === 0 ? 0.3 : 0.85);
     set(this.layers.gtr, level === 0 ? 0.25 : level === 1 ? 0.75 : 1);
     set(this.layers.calm, level === 0 ? 0.6 : 0.15);
+    set(this.layers.techno, level === 0 ? 0 : 1);
     set(this.layers.danger, level === 2 ? 0.8 : 0, level === 2 ? 0.15 : 0.7);
   }
 
@@ -156,9 +160,10 @@ export class Music {
     if (s === 15 && bar === 3) this.snare(t, L.drums, 0.45);
     if (s % 4 === 2) this.hat(t, L.drums, 0.32, 0.09);
     else if (s % 2 === 1) this.hat(t, L.drums, 0.12, 0.03);
-    // danger: 16th hats + crash on each bar
-    this.hat(t, L.danger, 0.1, 0.025);
-    if (s === 0) this.crash(t, L.danger);
+    // techno bits (whenever playing): 16th hats, crash on each bar, rising noise sweep into the loop
+    this.hat(t, L.techno, 0.1, 0.025);
+    if (s === 0) this.crash(t, L.techno);
+    if (bar === 3 && s === 8) this.sweep(t, L.techno, STEP * 8);
 
     // pumping octave bass on every 16th
     this.bass(mtof(root - 12 + (s % 2) * 12), t, STEP * 0.9, L.bass);
@@ -282,6 +287,26 @@ export class Music {
 
   private hat(t: number, dest: AudioNode, vol: number, dur: number): void {
     this.noiseHit(t, dest, 'highpass', 7500, vol, dur);
+  }
+
+  /** Filtered white-noise riser, classic techno build into the next loop. */
+  private sweep(t: number, dest: AudioNode, dur: number): void {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 3;
+    f.frequency.setValueAtTime(600, t);
+    f.frequency.exponentialRampToValueAtTime(9000, t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.18, t + dur * 0.95);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(dest);
+    src.start(t);
+    src.stop(t + dur + 0.02);
   }
 
   private crash(t: number, dest: AudioNode): void {
