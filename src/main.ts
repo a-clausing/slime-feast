@@ -20,21 +20,10 @@ function isStandalone(): boolean {
   );
 }
 function fitAppToScreen(): void {
-  const app = document.getElementById('app')!;
-  const portrait = window.matchMedia('(orientation: portrait)').matches;
-  if (isStandalone() && portrait && screen.height > window.innerHeight) {
-    const sw = Math.min(screen.width, screen.height);
-    const sh = Math.max(screen.width, screen.height);
-    app.style.width = `${sw}px`;
-    app.style.height = `${sh}px`;
-    document.documentElement.style.height = `${sh}px`;
-    document.body.style.height = `${sh}px`;
-  } else {
-    app.style.width = '';
-    app.style.height = '';
-    document.documentElement.style.height = '';
-    document.body.style.height = '';
-  }
+  // CSS handles the layout (see html.ios-standalone in style.css); this just flags the mode
+  // for iOS, whose `navigator.standalone` is more reliable than the display-mode media query.
+  document.documentElement.classList.toggle('ios-standalone', isStandalone());
+  window.scrollTo(0, 0);
 }
 
 /** Size of the game container (#app). */
@@ -44,6 +33,13 @@ function viewport(): { w: number; h: number } {
   const w = Math.round(r.width) || window.innerWidth;
   const h = Math.round(r.height) || window.innerHeight;
   return { w, h };
+}
+
+declare const __BUILD__: string;
+const info = document.getElementById('build-info');
+if (info) {
+  const sa = getComputedStyle(document.documentElement).getPropertyValue('--sat').trim();
+  info.textContent = `Build ${typeof __BUILD__ === 'string' ? __BUILD__ : 'dev'} · ${isStandalone() ? 'home-screen' : 'browser'} · screen ${screen.width}×${screen.height} · view ${window.innerWidth}×${window.innerHeight} ${sa}`;
 }
 
 const scene = new GameScene();

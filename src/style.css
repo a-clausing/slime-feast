@@ -38,8 +38,44 @@ body {
   width: 100vw;
   height: 100vh;
   height: 100lvh;
-  /* in iOS home-screen mode, main.ts sets an explicit full-screen height (see fitAppToScreen) */
   overflow: hidden;
+}
+
+/*
+ * iOS home-screen apps with a black-translucent status bar shift the page up by the status-bar
+ * height, so anything sized to the viewport (fixed, 100%, 100vh) stops short at the bottom.
+ * Known fix: make the document taller by env(safe-area-inset-top) and lay the game out in the
+ * document (absolute) instead of pinning it to the viewport (fixed).
+ */
+@media (display-mode: standalone) {
+  html {
+    height: calc(100% + env(safe-area-inset-top));
+    min-height: calc(100% + env(safe-area-inset-top));
+  }
+  body {
+    height: 100%;
+  }
+  #app {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+}
+html.ios-standalone {
+  height: calc(100% + env(safe-area-inset-top));
+  min-height: calc(100% + env(safe-area-inset-top));
+}
+html.ios-standalone body {
+  height: 100%;
+}
+html.ios-standalone #app {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 #game,
@@ -744,4 +780,11 @@ button {
     opacity: 0;
     transform: scale(0.95) rotate(-3deg) translateY(-30px);
   }
+}
+
+.build-info {
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(185, 164, 230, 0.6);
+  font-variant-numeric: tabular-nums;
 }
