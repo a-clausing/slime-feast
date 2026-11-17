@@ -664,3 +664,43 @@ button {
   margin-left: 4px;
   vertical-align: 2px;
 }
+
+.banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 32%;
+  z-index: 30;
+  text-align: center;
+  pointer-events: none;
+  font-size: clamp(40px, 13vw, 64px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ffd84d;
+  -webkit-text-stroke: 3px #3a2400;
+  text-shadow:
+    0 5px 0 #3a2400,
+    0 0 30px rgba(255, 216, 77, 0.8);
+  animation: bannerPop 1.8s ease-out forwards;
+}
+@keyframes bannerPop {
+  0% {
+    transform: scale(0.3) rotate(-6deg);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.15) rotate(-3deg);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1) rotate(-3deg);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) rotate(-3deg) translateY(-30px);
+  }
+}

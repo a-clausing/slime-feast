@@ -68,6 +68,8 @@ export class World {
   gameOver = false;
   /** High score at the moment this run started (for the "new high score" badge). */
   startHigh = 0;
+  /** Set once the "NEW PEAK!" banner has been shown this run. */
+  peakAnnounced = false;
   /** Menu background mode: no player, never ends. */
   attract = false;
   pressure: Pressure = pressureAt(0);

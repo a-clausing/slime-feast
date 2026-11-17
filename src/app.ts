@@ -220,6 +220,7 @@ export class App implements RenderHost {
         this.onEvents(events);
         this.hud.update(w, this.scene);
         this.tutorial(w, deltaMs / 1000);
+        this.checkPeak(w);
         this.saveTimer += deltaMs / 1000;
         if (this.saveTimer >= CONFIG.SAVE_INTERVAL) {
           this.saveTimer = 0;
@@ -286,6 +287,23 @@ export class App implements RenderHost {
     }
     if (foodSfx) this.sfx.food(bigFood);
   }
+
+  /** Celebrate the moment you pass your all-time peak mass (once per run). */
+  private checkPeak(w: World): void {
+    if (w.peakAnnounced || this.meta.bestPeak <= 0) return;
+    if (w.totalPlayerMass() <= this.meta.bestPeak) return;
+    w.peakAnnounced = true;
+    const b = $('banner');
+    b.classList.remove('hidden');
+    b.style.animation = 'none';
+    void b.offsetWidth;
+    b.style.animation = '';
+    clearTimeout(this.bannerTimer);
+    this.bannerTimer = window.setTimeout(() => b.classList.add('hidden'), 1900);
+    this.sfx.recombine();
+    if (navigator.vibrate) navigator.vibrate([20, 40, 20, 40, 60]);
+  }
+  private bannerTimer = 0;
 
   private tutorial(w: World, dt: number): void {
     if (this.hintTimer > 0) {

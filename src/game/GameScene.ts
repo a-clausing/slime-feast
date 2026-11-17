@@ -212,6 +212,11 @@ export class GameScene extends Phaser.Scene {
       p.active = false;
       p.img.setVisible(false);
     }
+    for (const p of this.pops) {
+      p.life = 0;
+      p.t.setVisible(false);
+    }
+    this.pelletGain = 0;
     this.boundWorld = world;
     this.buildArena(world.width, world.height, world.expansions);
     for (let i = 0; i < this.foodIds.length; i++) this.foodIds[i] = -1;
@@ -431,6 +436,8 @@ export class GameScene extends Phaser.Scene {
     this.renderFood(w, t, view);
     this.updateFx(dt);
     this.updateCamera(w, dt);
+    this.flushPellets(dt);
+    this.updatePops(dt);
   }
 
   private renderFood(w: World, t: number, view: Phaser.Geom.Rectangle): void {
@@ -588,6 +595,71 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private pops: { t: Phaser.GameObjects.Text; life: number; max: number; x: number; y: number; rise: number }[] = [];
+  private pelletGain = 0;
+  private pelletTimer = 0;
+
+  /** Floating "+N" number that rises and fades; constant on-screen size regardless of zoom. */
+  popText(x: number, y: number, text: string, color: string, big = false): void {
+    let p = this.pops.find((q) => q.life <= 0);
+    if (!p) {
+      if (this.pops.length >= 14) p = this.pops.reduce((a, b) => (a.life < b.life ? a : b));
+      else {
+        const t = this.add
+          .text(0, 0, '', {
+            fontFamily: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif',
+            fontSize: '44px',
+            fontStyle: '900',
+            color: '#ffffff',
+            stroke: '#12081d',
+            strokeThickness: 9,
+          })
+          .setOrigin(0.5)
+          .setDepth(DEPTH.label + 10);
+        p = { t, life: 0, max: 1, x: 0, y: 0, rise: 0 };
+        this.pops.push(p);
+      }
+    }
+    p.t.setText(text).setColor(color).setVisible(true).setAlpha(1);
+    // stack pops that start close together so simultaneous kills don't overlap
+    const base = (0.45 * this.dpr) / this.camZoom;
+    const recent = this.pops.filter((q) => q !== p && q.life > q.max - 0.3 && Math.abs(q.x - x) < 120 * base).length;
+    p.x = x + (Math.random() - 0.5) * 30 * base;
+    p.y = y - recent * 46 * base;
+    p.max = p.life = big ? 1.1 : 0.8;
+    p.rise = big ? 1.4 : 1;
+    p.t.setData('big', big);
+  }
+
+  private updatePops(dt: number): void {
+    // on-screen size: ~20 css px (big ~28), independent of zoom
+    const base = (0.45 * this.dpr) / this.camZoom;
+    for (const p of this.pops) {
+      if (p.life <= 0) continue;
+      p.life -= dt;
+      if (p.life <= 0) {
+        p.t.setVisible(false);
+        continue;
+      }
+      const k = 1 - p.life / p.max; // 0 → 1
+      const big = p.t.getData('big') as boolean;
+      const pop = k < 0.15 ? 0.6 + (k / 0.15) * 0.6 : 1.2 - Math.min(0.2, (k - 0.15) * 0.6);
+      const sc = base * (big ? 1.35 : 1) * pop;
+      p.t.setScale(sc).setPosition(p.x, p.y - k * 60 * p.rise * (base / 0.5)).setAlpha(k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1);
+    }
+  }
+
+  /** Batch pellet gains into one "+N" over the player every ~0.35 s (avoids spam). */
+  private flushPellets(dt: number): void {
+    this.pelletTimer -= dt;
+    if (this.pelletTimer > 0 || this.pelletGain <= 0) return;
+    const a = this.boundWorld?.active;
+    const v = a ? this.views.get(a.id) : undefined;
+    if (v) this.popText(v.rx, v.ry - v.dispR - 10 * this.ws, `+${Math.round(this.pelletGain)}`, '#d8ffa8');
+    this.pelletGain = 0;
+    this.pelletTimer = 0.35;
+  }
+
   private ring(x: number, y: number, r: number, tint: number): void {
     const img = this.add.image(x, y, 'ring').setDepth(DEPTH.fx).setTint(tint).setScale((r * 2) / 128).setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({ targets: img, scale: (r * 4.5) / 128, alpha: 0, duration: 520, ease: 'Cubic.out', onComplete: () => img.destroy() });
@@ -599,6 +671,7 @@ export class GameScene extends Phaser.Scene {
         case 'food': {
           const v = this.views.get(ev.eaterId);
           if (v) v.pulse = Math.min(1, v.pulse + (ev.big ? 0.5 : 0.18));
+          if (ev.byPlayer) this.pelletGain += ev.big ? CONFIG.FOOD_BIG_MASS : CONFIG.FOOD_MASS;
           if (ev.byPlayer || this.isWorldPointVisible(ev.x, ev.y, 20)) this.burst(ev.x, ev.y, ev.big ? 0xffd34d : 0xc8ff6a, ev.big ? 8 : 3, 120, ev.big ? 18 : 12, 0.35);
           break;
         }
@@ -616,6 +689,7 @@ export class GameScene extends Phaser.Scene {
             this.ghosts.push({ img: ghost, fromX: pv.rx, fromY: pv.ry, toId: ev.eaterId, t: 0, dur: 0.22, size: pv.dispR / SLIME_BODY_R });
           }
           this.burst(ev.x, ev.y, tint, Math.min(18, 6 + Math.floor(Math.sqrt(ev.mass))), 260, 22, 0.6);
+          if (ev.byPlayer) this.popText(ev.x, ev.y, `+${Math.round(ev.mass).toLocaleString('en-US')}`, '#8dff4f', true);
           break;
         }
         case 'split': {
@@ -649,6 +723,7 @@ export class GameScene extends Phaser.Scene {
           for (const v of this.views.values()) v.ry += ev.shiftY;
           for (const p of this.particles) if (p.active) p.img.y += ev.shiftY;
           for (const g of this.ghosts) g.fromY += ev.shiftY;
+          for (const p of this.pops) p.y += ev.shiftY;
           for (let i = 0; i < this.foodIds.length; i++) this.foodIds[i] = -1;
           this.buildArena(ev.width, ev.height, ev.expansions);
           this.applyCamera();
