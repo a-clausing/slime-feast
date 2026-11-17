@@ -237,7 +237,7 @@ export class GameScene extends Phaser.Scene {
     const isPlayer = s.kind !== 'enemy';
     const key = isPlayer ? 'slimePlayer' : `slimeEnemy${s.variant}`;
     const shadow = this.add.image(s.x, s.y, 'shadow').setDepth(DEPTH.shadow);
-    const aura = this.add.image(s.x, s.y, 'glow').setDepth(DEPTH.aura).setTint(0xff2a3a).setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
+    const aura = this.add.image(s.x, s.y, 'aura').setDepth(DEPTH.aura).setTint(0xff2a3a).setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
     const glow = isPlayer
       ? this.add.image(s.x, s.y, 'glow').setDepth(DEPTH.aura).setTint(PLAYER_TINT).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD)
       : null;
@@ -408,9 +408,10 @@ export class GameScene extends Phaser.Scene {
         const edible = !danger && hunterMass > 0 && canConsume(hunterMass, s.mass);
         v.aura.setVisible(danger || edible);
         if (danger) {
-          v.aura.setTint(0xff2a3a).setPosition(x, y).setScale((v.dispR * 3.3) / 128).setAlpha(0.6 + 0.2 * Math.sin(t * 5 + v.phase));
+          // halo outer radius ≈ 1.6× body radius, fully lit at the body edge
+          v.aura.setTint(0xff2a3a).setPosition(x, y).setScale((v.dispR * 3.2) / 256).setAlpha(0.75 + 0.2 * Math.sin(t * 5 + v.phase));
         } else if (edible) {
-          v.aura.setTint(0x8dff4f).setPosition(x, y).setScale((v.dispR * 2.8) / 128).setAlpha(0.32 + 0.08 * Math.sin(t * 3 + v.phase));
+          v.aura.setTint(0x6dff2f).setPosition(x, y).setScale((v.dispR * 3.0) / 256).setAlpha(0.7 + 0.15 * Math.sin(t * 3 + v.phase));
         }
       }
       if (v.label) {

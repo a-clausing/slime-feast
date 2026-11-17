@@ -19,11 +19,17 @@ export const CONFIG = {
   // ── Speed ───────────────────────────────────────────────────
   /** speed = SPEED_BASE * (mass / STARTING_MASS) ^ -SPEED_EXPONENT, clamped. */
   SPEED_BASE: 335,
-  SPEED_EXPONENT: 0.27,
+  SPEED_EXPONENT: 0.1,
   SPEED_MIN: 120,
   SPEED_MAX: 360,
   /** How quickly velocity approaches the desired velocity (1/s). Higher = snappier. */
   ACCEL_RESPONSE: 13,
+  /**
+   * World tempo: every slime's speed is multiplied by how far the camera has zoomed out for
+   * the controlled slime (view span / starting view span), so on-screen speed stays about the
+   * same as you grow. Relative speeds between slimes are unchanged. Eased at this rate (1/s).
+   */
+  TEMPO_FOLLOW: 1.5,
 
   // ── Consumption ─────────────────────────────────────────────
   CONSUME_RATIO: 1.2,
@@ -88,8 +94,8 @@ export const CONFIG = {
   ENEMY_HARD_CAP: 80,
   ENEMY_MIN_MASS: 8,
   /** Enemies move at this fraction of the shared speed formula. */
-  ENEMY_SPEED_FACTOR: 0.87,
-  ENEMY_SPEED_FACTOR_MAX: 1.0,
+  ENEMY_SPEED_FACTOR: 0.8,
+  ENEMY_SPEED_FACTOR_MAX: 0.92,
   /** Spawn clearance from any player portion = view radius estimate + this. */
   ENEMY_SPAWN_CLEARANCE: 520,
   /** Large predators spawn at least this far from the player at run start. */

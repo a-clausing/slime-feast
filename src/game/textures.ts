@@ -609,6 +609,19 @@ export function generateTextures(scene: Phaser.Scene): void {
   makeDecor(scene);
   makeSoftCircle(scene, 'glow', 128, 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0)');
   makeSoftCircle(scene, 'spark', 32, 'rgba(255,255,255,1)', 'rgba(255,255,255,0)');
+  // halo for the red/green "danger / prey" glow: solid out to the body edge, then a bright soft falloff
+  {
+    const S = 256;
+    const ctx = canvasTex(scene, 'aura', S, S);
+    const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.62, 'rgba(255,255,255,1)');
+    g.addColorStop(0.72, 'rgba(255,255,255,0.75)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, S, S);
+    refresh(scene, 'aura');
+  }
   // ring for recombine/warnings
   const ctx = canvasTex(scene, 'ring', 128, 128);
   ctx.lineWidth = 6;

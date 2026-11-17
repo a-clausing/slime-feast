@@ -25,6 +25,7 @@ export interface RunSave {
   height?: number;
   expansions?: number;
   peakAnnounced?: boolean;
+  tempo?: number;
   /** Compact slime tuples. */
   slimes: SlimeTuple[];
   /** Compact food tuples (alive only). */
@@ -72,6 +73,7 @@ export function serializeWorld(w: World, camera?: RunSave['camera']): RunSave {
     height: w.height,
     expansions: w.expansions,
     peakAnnounced: w.peakAnnounced,
+    tempo: w.tempo,
     // Masses are stored at full precision so split/merge totals stay exact.
     slimes: w.slimes
       .filter((s) => s.alive)
@@ -130,6 +132,7 @@ export function deserializeWorld(data: unknown): World {
   w.foodAccumulator = isNum(s.foodAccumulator) ? s.foodAccumulator : 0;
   w.startHigh = isNum(s.startHigh) ? s.startHigh : 0;
   w.peakAnnounced = !!s.peakAnnounced;
+  w.tempo = isNum(s.tempo) && s.tempo > 0 ? s.tempo : 1;
   if (isNum(s.width) && isNum(s.height) && s.width >= CONFIG.WORLD_WIDTH && s.height >= CONFIG.WORLD_HEIGHT) {
     w.width = s.width;
     w.height = s.height;

@@ -189,9 +189,19 @@ export class World {
   get scale(): number {
     return this.width / CONFIG.WORLD_WIDTH;
   }
-  /** Size-based speed, scaled with the arena so on-screen speed stays consistent after zooming out. */
+  /**
+   * Size-based speed × world tempo. Tempo follows the camera's zoom-out for the controlled
+   * slime, so movement looks equally quick on screen at any size (and after arena growth).
+   */
   speedOf(mass: number): number {
-    return speedForMass(mass) * this.scale;
+    return speedForMass(mass) * this.tempo;
+  }
+  /** Current eased world tempo (1 at the start of a run). */
+  tempo = 1;
+  targetTempo(): number {
+    const a = this.active;
+    const r = a ? radiusForMass(a.mass) : CONFIG.BASE_RADIUS;
+    return viewSpan(r, this.width, this.height) / viewSpan(CONFIG.BASE_RADIUS, CONFIG.WORLD_WIDTH, CONFIG.WORLD_HEIGHT);
   }
   get foodEnabled(): boolean {
     return this.expansions === 0;
@@ -340,6 +350,7 @@ export class World {
       s.py = s.y;
     }
     this.massBeforeStep = this.totalPlayerMass();
+    this.tempo += (this.targetTempo() - this.tempo) * (1 - Math.exp(-CONFIG.TEMPO_FOLLOW * dt));
 
     this.moveSlimes(dt, input);
     this.eatFood();

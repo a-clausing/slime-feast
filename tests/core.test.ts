@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/config';
 import { canConsume, radiusForMass, speedForMass, overlapEnoughToEat } from '../src/core/mass';
-import { World, screenCoverage } from '../src/core/world';
+import { World, screenCoverage, viewSpan } from '../src/core/world';
 import { deserializeWorld, serializeWorld } from '../src/core/save';
 import { pressureAt } from '../src/core/difficulty';
 import { emptyWorld, enemy, quietStep } from './helpers';
@@ -164,7 +164,7 @@ describe('Slime Split', () => {
     expect(a.y).toBeGreaterThan(h.y + 50);
     expect(Math.abs(a.x - h.x)).toBeLessThan(1e-6);
     expect(a.vy).toBeGreaterThan(0);
-    expect(Math.hypot(a.vx, a.vy)).toBeLessThanOrEqual(speedForMass(a.mass) + 1e-9);
+    expect(Math.hypot(a.vx, a.vy)).toBeLessThanOrEqual(w.speedOf(a.mass) + 1e-9);
   });
 
   it('ignores a brief thumb flick right before SPLIT (smoothed aim)', () => {
@@ -220,15 +220,16 @@ describe('Slime Split', () => {
     w.trySplit();
     quietStep(w, 120, { x: 1, y: 0 });
     const a = w.active!;
-    expect(Math.hypot(a.vx, a.vy)).toBeCloseTo(speedForMass(a.mass), 3);
+    expect(Math.abs(Math.hypot(a.vx, a.vy) / w.speedOf(a.mass) - 1)).toBeLessThan(0.01);
     // and right after splitting there is no burst above the normal speed
     const { w: w2 } = emptyWorld(500);
     quietStep(w2, 120, { x: 1, y: 0 });
+    const tempoAtSplit = w2.tempo; // tempo only eases down afterwards (smaller slime → camera zooms in)
     w2.trySplit();
     for (let i = 0; i < 30; i++) {
       quietStep(w2, 1, { x: 1, y: 0 });
       const b = w2.active!;
-      expect(Math.hypot(b.vx, b.vy)).toBeLessThanOrEqual(speedForMass(b.mass) + 1e-9);
+      expect(Math.hypot(b.vx, b.vy)).toBeLessThanOrEqual(speedForMass(b.mass) * tempoAtSplit + 1e-9);
     }
   });
 
@@ -301,7 +302,7 @@ describe('Slime Split', () => {
     expect(w.isSplit).toBe(false);
     expect(w.activeId).toBe(actId);
     // only its own one-step movement, no teleport
-    expect(Math.hypot(w.active!.x - ax, w.active!.y - ay)).toBeLessThan(speedForMass(200) * CONFIG.SIM_DT + 0.5);
+    expect(Math.hypot(w.active!.x - ax, w.active!.y - ay)).toBeLessThan(w.speedOf(200) * CONFIG.SIM_DT + 0.5);
     expect(w.active!.mass).toBe(200);
     expect(w.canSplit()).toBe(true);
   });
@@ -427,10 +428,13 @@ describe('arena expansion', () => {
     w.active!.mass = 3000; // big enough not to get eaten while idling
     w.expand();
     for (const f of w.food) f.alive = false;
-    const before = w.enemyCount();
-    for (let i = 0; i < 600; i++) w.step(CONFIG.SIM_DT, { x: 0, y: 0 });
+    let spawned = 0;
+    for (let i = 0; i < 600; i++) {
+      w.step(CONFIG.SIM_DT, { x: 0, y: 0 });
+      spawned += w.drainEvents().filter((e) => e.type === 'spawn').length;
+    }
     expect(w.foodCount()).toBe(0);
-    expect(w.enemyCount()).toBeGreaterThanOrEqual(before);
+    expect(spawned).toBeGreaterThan(5);
   });
 
   it('repeats: expands again at 20% of the bigger screen', () => {
@@ -445,11 +449,28 @@ describe('arena expansion', () => {
     expect(w.width).toBe(CONFIG.WORLD_WIDTH * 8);
   });
 
-  it('scales speed with the arena so on-screen speed stays the same', () => {
-    const { w, p } = emptyWorld(200);
-    w.expand();
-    quietStep(w, 120, { x: 1, y: 0 });
-    expect(Math.hypot(p.vx, p.vy)).toBeCloseTo(speedForMass(200) * 2, 3);
+  it('world tempo keeps on-screen speed steady as you grow (and after arena growth)', () => {
+    const screenSpeed = (mass: number, expand: boolean) => {
+      const { w, p } = emptyWorld(mass);
+      if (expand) w.expand();
+      quietStep(w, 600, { x: 1, y: 0 }); // let tempo settle
+      p.x = w.width / 2;
+      p.y = w.height / 2;
+      quietStep(w, 60, { x: 1, y: 0 });
+      return Math.hypot(p.vx, p.vy) / viewSpan(radiusForMass(p.mass), w.width, w.height);
+    };
+    const small = screenSpeed(25, false);
+    const big = screenSpeed(5000, false);
+    const huge = screenSpeed(15000, true);
+    // only a gentle slowdown on screen (>= 45% of starting on-screen speed even at 15k mass)
+    expect(big / small).toBeGreaterThan(0.5);
+    expect(huge / small).toBeGreaterThan(0.45);
+  });
+
+  it('bigger slimes are still slower than smaller ones in the same world (fleeing works)', () => {
+    const { w } = emptyWorld(1000);
+    expect(w.speedOf(400)).toBeGreaterThan(w.speedOf(1000));
+    expect(w.speedOf(1000)).toBeGreaterThan(w.speedOf(1200));
   });
 
   it('survives save/restore after expanding', () => {
@@ -484,6 +505,7 @@ describe('difficulty', () => {
 describe('save / restore', () => {
   it('round-trips an active split run exactly', () => {
     const w = new World(77);
+    w.active!.mass = 200; // sturdy enough to survive the warm-up
     for (let i = 0; i < 300; i++) w.step(CONFIG.SIM_DT, { x: 1, y: 0.3 });
     w.active!.mass = 640.125;
     w.trySplit();
