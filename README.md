@@ -10,6 +10,8 @@
 - **Eat:** gems, and any slime you outweigh by at least 20% (`yourMass ≥ theirMass × 1.20`). Slimes with a **red glow** can eat you.
 - **SLIME SPLIT** (button bottom-right, or Space) at **100+ mass**: 60% of you stays put as a stationary portion; 40% becomes your controlled hunter. It's faster only because it's lighter. Touch the stationary portion to merge again. Both halves can eat and be eaten. You only lose when no portion survives.
 - **Pause:** top-right button, or Escape.
+- **Arena growth:** each time your slime covers more than 20% of the screen, the arena doubles in width and height (new squares are added above, to the right and to the top-right) and the camera zooms out. After the first growth, gems stop spawning; only enemy slimes keep coming.
+- **Score:** your final mass, i.e. what you're carrying when your last piece is eaten. Records are also kept for peak mass and longest game.
 
 ## Development
 

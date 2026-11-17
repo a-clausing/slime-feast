@@ -21,6 +21,9 @@ export interface RunSave {
   recycleTimer: number;
   foodAccumulator: number;
   startHigh?: number;
+  width?: number;
+  height?: number;
+  expansions?: number;
   /** Compact slime tuples. */
   slimes: SlimeTuple[];
   /** Compact food tuples (alive only). */
@@ -64,6 +67,9 @@ export function serializeWorld(w: World, camera?: RunSave['camera']): RunSave {
     recycleTimer: w.recycleTimer,
     foodAccumulator: w.foodAccumulator,
     startHigh: w.startHigh,
+    width: w.width,
+    height: w.height,
+    expansions: w.expansions,
     // Masses are stored at full precision so split/merge totals stay exact.
     slimes: w.slimes
       .filter((s) => s.alive)
@@ -121,6 +127,11 @@ export function deserializeWorld(data: unknown): World {
   w.recycleTimer = isNum(s.recycleTimer) ? s.recycleTimer : 0;
   w.foodAccumulator = isNum(s.foodAccumulator) ? s.foodAccumulator : 0;
   w.startHigh = isNum(s.startHigh) ? s.startHigh : 0;
+  if (isNum(s.width) && isNum(s.height) && s.width >= CONFIG.WORLD_WIDTH && s.height >= CONFIG.WORLD_HEIGHT) {
+    w.width = s.width;
+    w.height = s.height;
+    w.expansions = isNum(s.expansions) ? s.expansions : 0;
+  }
 
   for (const t of s.slimes) {
     if (!Array.isArray(t) || t.length < 11 || !t.every(isNum)) throw new Error('save: bad slime');
@@ -151,9 +162,10 @@ export function deserializeWorld(data: unknown): World {
     if (!Array.isArray(t) || t.length < 6 || !t.every(isNum)) throw new Error('save: bad food');
     const [id, x, y, mass, big, variant] = t;
     const f: Food = { id, x, y, mass, big: big === 1, alive: true, variant };
-    w.foodGrid.add(w.food.length, x, y);
     w.food.push(f);
   }
+
+  w.rebuildFoodGrid();
 
   // integrity checks: the controlled slime must exist; home must exist iff split
   const act = w.slimes.find((x) => x.id === w.activeId);

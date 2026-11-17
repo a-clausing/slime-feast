@@ -57,6 +57,16 @@ export const CONFIG = {
   // ── Arena ───────────────────────────────────────────────────
   WORLD_WIDTH: 3000,
   WORLD_HEIGHT: 3000,
+  /**
+   * Arena expansion: when the controlled slime covers more than this fraction of a
+   * (portrait) screen, the arena doubles in width and height — new squares are added
+   * above, to the right and to the top-right — and food stops spawning for the rest of the run.
+   */
+  EXPAND_COVERAGE: 0.2,
+  /** Portrait screen height / width used for the coverage calculation. */
+  VIEW_ASPECT: 2.17,
+  /** Extra enemies allowed per expansion (up to ENEMY_HARD_CAP). */
+  ENEMIES_PER_EXPANSION: 8,
   DECOR_COUNT: 70,
 
   // ── Food ────────────────────────────────────────────────────
@@ -75,7 +85,7 @@ export const CONFIG = {
   ENEMY_COUNT_START: 26,
   ENEMY_COUNT_MAX: 56,
   /** Hard cap for mobile performance. */
-  ENEMY_HARD_CAP: 60,
+  ENEMY_HARD_CAP: 80,
   ENEMY_MIN_MASS: 8,
   /** Enemies move at this fraction of the shared speed formula. */
   ENEMY_SPEED_FACTOR: 0.87,

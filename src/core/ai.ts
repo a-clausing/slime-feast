@@ -35,7 +35,7 @@ export function thinkEnemy(world: World, e: Slime): void {
   const rng = world.rng;
   const p = world.pressure;
   const r = radiusForMass(e.mass);
-  const detect = (CONFIG.AI_DETECT_BASE + r * CONFIG.AI_DETECT_RADIUS_MULT) * p.detectMult;
+  const detect = (CONFIG.AI_DETECT_BASE * world.scale + r * CONFIG.AI_DETECT_RADIUS_MULT) * p.detectMult;
   const fleeRange = detect * CONFIG.AI_FLEE_RANGE_MULT;
 
   let fx = 0;
@@ -72,7 +72,7 @@ export function thinkEnemy(world: World, e: Slime): void {
           best = s;
         }
       }
-    } else if (gap < 50) {
+    } else if (gap < 50 * world.scale) {
       // neutral, similar size: slide around each other
       const w = 1 / Math.max(10, gap + 20);
       avoidX -= (dx / dist) * w;
@@ -137,9 +137,9 @@ export function thinkEnemy(world: World, e: Slime): void {
   dirY += avoidY * 12;
 
   // wall avoidance
-  const m = CONFIG.AI_WALL_MARGIN + r;
-  const W = CONFIG.WORLD_WIDTH;
-  const H = CONFIG.WORLD_HEIGHT;
+  const m = CONFIG.AI_WALL_MARGIN * world.scale + r;
+  const W = world.width;
+  const H = world.height;
   if (e.x < m) dirX += (m - e.x) / m * 1.6;
   if (e.x > W - m) dirX -= (e.x - (W - m)) / m * 1.6;
   if (e.y < m) dirY += (m - e.y) / m * 1.6;

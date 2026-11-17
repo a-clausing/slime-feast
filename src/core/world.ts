@@ -8,11 +8,31 @@ import type { Food, GameEvent, InputState, RunStats, Slime, SlimeKind } from './
 
 export const ENEMY_VARIANTS = 6;
 
+/**
+ * World units visible across the narrow (width) dimension of a portrait screen for a slime
+ * of this radius. Grows with size, capped by the max zoom-out (which scales with the arena)
+ * and by the arena itself (the camera never shows outside it). Shared by camera and sim.
+ */
+export function viewSpan(radius: number, worldW: number, worldH: number): number {
+  const scale = worldW / CONFIG.WORLD_WIDTH;
+  return Math.min(
+    CONFIG.VIEW_SPAN_MIN + radius * CONFIG.VIEW_SPAN_PER_RADIUS,
+    CONFIG.VIEW_SPAN_MAX * scale,
+    worldW,
+    worldH / CONFIG.VIEW_ASPECT,
+  );
+}
+
+/** Fraction of a portrait screen covered by a slime of this radius. */
+export function screenCoverage(radius: number, worldW: number, worldH: number): number {
+  const span = viewSpan(radius, worldW, worldH);
+  return (Math.PI * radius * radius) / (span * span * CONFIG.VIEW_ASPECT);
+}
+
 /** Estimated half-diagonal of the visible area for a given player radius (spawn fairness). */
-export function viewReach(radius: number): number {
-  const span = Math.min(CONFIG.VIEW_SPAN_MAX, CONFIG.VIEW_SPAN_MIN + radius * CONFIG.VIEW_SPAN_PER_RADIUS);
+export function viewReach(radius: number, worldW: number = CONFIG.WORLD_WIDTH, worldH: number = CONFIG.WORLD_HEIGHT): number {
   // portrait phones are ~2.2:1, so the far corner is ~1.2x the narrow span away
-  return span * 1.2;
+  return viewSpan(radius, worldW, worldH) * 1.2;
 }
 
 /**
@@ -24,6 +44,10 @@ export class World {
   seed: number;
   slimes: Slime[] = [];
   food: Food[] = [];
+  width: number = CONFIG.WORLD_WIDTH;
+  height: number = CONFIG.WORLD_HEIGHT;
+  /** Number of times the arena has doubled. Food stops spawning after the first. */
+  expansions = 0;
   foodGrid = new Grid(CONFIG.WORLD_WIDTH, CONFIG.WORLD_HEIGHT, 120);
   events: GameEvent[] = [];
   nextId = 1;
@@ -138,8 +162,8 @@ export class World {
     const m = 30;
     const f: Food = {
       id: this.nextId++,
-      x: Math.min(CONFIG.WORLD_WIDTH - m, Math.max(m, x ?? this.rng.range(m, CONFIG.WORLD_WIDTH - m))),
-      y: Math.min(CONFIG.WORLD_HEIGHT - m, Math.max(m, y ?? this.rng.range(m, CONFIG.WORLD_HEIGHT - m))),
+      x: Math.min(this.width - m, Math.max(m, x ?? this.rng.range(m, this.width - m))),
+      y: Math.min(this.height - m, Math.max(m, y ?? this.rng.range(m, this.height - m))),
       mass: big ? CONFIG.FOOD_BIG_MASS : CONFIG.FOOD_MASS,
       big,
       alive: true,
@@ -158,6 +182,18 @@ export class World {
   }
 
   // ───────────────────────────── queries ─────────────────────────────
+
+  /** Arena size relative to the starting arena (1, 2, 4, …). Distances and speeds scale with it. */
+  get scale(): number {
+    return this.width / CONFIG.WORLD_WIDTH;
+  }
+  /** Size-based speed, scaled with the arena so on-screen speed stays consistent after zooming out. */
+  speedOf(mass: number): number {
+    return speedForMass(mass) * this.scale;
+  }
+  get foodEnabled(): boolean {
+    return this.expansions === 0;
+  }
 
   get active(): Slime | undefined {
     return this.slimes.find((s) => s.id === this.activeId && s.alive);
@@ -230,7 +266,7 @@ export class World {
     let ax = a.x + dx * sep;
     let ay = a.y + dy * sep;
     const fits = (x: number, y: number) =>
-      x >= rAct && y >= rAct && x <= CONFIG.WORLD_WIDTH - rAct && y <= CONFIG.WORLD_HEIGHT - rAct;
+      x >= rAct && y >= rAct && x <= this.width - rAct && y <= this.height - rAct;
     if (!fits(ax, ay)) {
       let placed = false;
       for (let k = 1; k <= 8 && !placed; k++) {
@@ -247,8 +283,8 @@ export class World {
         }
       }
       if (!placed) {
-        ax = Math.min(CONFIG.WORLD_WIDTH - rAct, Math.max(rAct, ax));
-        ay = Math.min(CONFIG.WORLD_HEIGHT - rAct, Math.max(rAct, ay));
+        ax = Math.min(this.width - rAct, Math.max(rAct, ax));
+        ay = Math.min(this.height - rAct, Math.max(rAct, ay));
       }
     }
 
@@ -261,7 +297,7 @@ export class World {
     mobile.px = a.x; // render interpolation: visually emerge from the original body
     mobile.py = a.y;
     // Heads off in the aim direction at (never above) its normal size-based speed — no dash.
-    const sp = speedForMass(activeMass);
+    const sp = this.speedOf(activeMass);
     const dl = Math.hypot(ax - a.x, ay - a.y) || 1;
     mobile.vx = ((ax - a.x) / dl) * sp;
     mobile.vy = ((ay - a.y) / dl) * sp;
@@ -308,6 +344,7 @@ export class World {
     this.resolveSlimeContacts();
     if (!this.attract) this.updatePlayerState();
     if (this.gameOver) return;
+    if (!this.attract) this.checkExpansion();
     this.maintainPopulation(dt);
     this.compact();
 
@@ -317,8 +354,8 @@ export class World {
 
   private clampToWorld(s: Slime): void {
     const r = radiusForMass(s.mass);
-    const W = CONFIG.WORLD_WIDTH;
-    const H = CONFIG.WORLD_HEIGHT;
+    const W = this.width;
+    const H = this.height;
     if (2 * r >= W) s.x = W / 2;
     else if (s.x < r) {
       s.x = r;
@@ -370,7 +407,7 @@ export class World {
         continue;
       }
       if (s.kind === 'player') {
-        const sp = speedForMass(s.mass) * Math.min(1, il);
+        const sp = this.speedOf(s.mass) * Math.min(1, il);
         const tx = il > 0.01 ? (input.x / il) * sp : 0;
         const ty = il > 0.01 ? (input.y / il) * sp : 0;
         s.vx += (tx - s.vx) * k;
@@ -380,7 +417,7 @@ export class World {
         if (s.think <= 0) thinkEnemy(this, s);
         const diff = wrapAngle(s.desired - s.heading);
         s.heading = wrapAngle(s.heading + Math.max(-turn, Math.min(turn, diff)));
-        const sp = speedForMass(s.mass) * this.pressure.enemySpeedFactor * s.speedJitter * modeSpeed(s.mode);
+        const sp = this.speedOf(s.mass) * this.pressure.enemySpeedFactor * s.speedJitter * modeSpeed(s.mode);
         s.vx += (Math.cos(s.heading) * sp - s.vx) * ke;
         s.vy += (Math.sin(s.heading) * sp - s.vy) * ke;
       }
@@ -593,13 +630,25 @@ export class World {
   spawnEnemy(mass = this.sampleEnemyMass()): Slime | null {
     const portions = this.playerPortions();
     const r = radiusForMass(mass);
+    const anchor = this.active ?? portions[0];
     for (let tries = 0; tries < 24; tries++) {
-      const x = this.rng.range(r + 40, CONFIG.WORLD_WIDTH - r - 40);
-      const y = this.rng.range(r + 40, CONFIG.WORLD_HEIGHT - r - 40);
+      let x: number;
+      let y: number;
+      if (this.expansions > 0 && anchor) {
+        // big arena: spawn in a ring just beyond the screen so the action stays near the player
+        const reach = viewReach(radiusForMass(anchor.mass), this.width, this.height) + r + 80;
+        const a = this.rng.range(0, Math.PI * 2);
+        const d = this.rng.range(reach + 240 * this.scale, reach * 2.2 + 240 * this.scale);
+        x = Math.min(this.width - r - 40, Math.max(r + 40, anchor.x + Math.cos(a) * d));
+        y = Math.min(this.height - r - 40, Math.max(r + 40, anchor.y + Math.sin(a) * d));
+      } else {
+        x = this.rng.range(r + 40, this.width - r - 40);
+        y = this.rng.range(r + 40, this.height - r - 40);
+      }
       let ok = true;
       for (const p of portions) {
         const pr = radiusForMass(p.mass);
-        let clear = viewReach(pr) + r + 80;
+        let clear = viewReach(pr, this.width, this.height) + r + 80;
         // big predators get extra clearance so they never appear without warning
         if (canConsume(mass, p.mass)) clear += 220;
         if ((p.x - x) ** 2 + (p.y - y) ** 2 < clear * clear) {
@@ -622,8 +671,8 @@ export class World {
   }
 
   private maintainPopulation(dt: number): void {
-    // Food: steady respawn up to target.
-    const missing = CONFIG.FOOD_TARGET - this.foodCount();
+    // Food: steady respawn up to target — only until the arena first expands.
+    const missing = this.foodEnabled ? CONFIG.FOOD_TARGET - this.foodCount() : 0;
     if (missing > 0) {
       this.foodAccumulator += CONFIG.FOOD_RESPAWN_RATE * dt;
       while (this.foodAccumulator >= 1 && this.foodCount() < CONFIG.FOOD_TARGET) {
@@ -636,7 +685,8 @@ export class World {
 
     // Enemies: top up toward the difficulty target, one at a time.
     this.spawnTimer -= dt;
-    if (this.spawnTimer <= 0 && this.enemyCount() < this.pressure.enemyTarget) {
+    const target = Math.min(CONFIG.ENEMY_HARD_CAP, this.pressure.enemyTarget + this.expansions * CONFIG.ENEMIES_PER_EXPANSION);
+    if (this.spawnTimer <= 0 && this.enemyCount() < target) {
       this.spawnEnemy();
       this.spawnTimer = 0.45;
     }
@@ -652,7 +702,7 @@ export class World {
         if (!e.alive || e.kind !== 'enemy') continue;
         if (e.mode === 'hunt' && portions.some((p) => p.id === e.targetId)) continue;
         const far = portions.every(
-          (p) => Math.hypot(p.x - e.x, p.y - e.y) > CONFIG.ENEMY_DESPAWN_DIST + radiusForMass(e.mass),
+          (p) => Math.hypot(p.x - e.x, p.y - e.y) > CONFIG.ENEMY_DESPAWN_DIST * this.scale + radiusForMass(e.mass),
         );
         if (!far) continue;
         if (e.mass < ref * 0.08 || e.mass > ref * 5) {
@@ -662,6 +712,39 @@ export class World {
         }
       }
     }
+  }
+
+  /** Grows the arena when the controlled slime covers too much of the screen. */
+  private checkExpansion(): void {
+    const a = this.active;
+    if (!a) return;
+    if (screenCoverage(radiusForMass(a.mass), this.width, this.height) > CONFIG.EXPAND_COVERAGE) this.expand();
+  }
+
+  /**
+   * Doubles the arena: the current arena becomes the bottom-left square and new squares are
+   * added above, to the right and to the top-right. Everything shifts down by the old height
+   * so world coordinates stay non-negative. Food stops spawning from now on.
+   */
+  expand(): void {
+    const shiftY = this.height;
+    this.width *= 2;
+    this.height *= 2;
+    this.expansions++;
+    for (const s of this.slimes) {
+      s.y += shiftY;
+      s.py += shiftY;
+    }
+    for (const f of this.food) f.y += shiftY;
+    this.rebuildFoodGrid();
+    this.events.push({ type: 'expand', shiftY, width: this.width, height: this.height, expansions: this.expansions });
+  }
+
+  rebuildFoodGrid(): void {
+    this.foodGrid = new Grid(this.width, this.height, 120 * this.scale);
+    this.food.forEach((f, i) => {
+      if (f.alive) this.foodGrid.add(i, f.x, f.y);
+    });
   }
 
   /** Remove dead slimes from the array (keeps iteration cheap). */

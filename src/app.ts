@@ -271,6 +271,11 @@ export class App implements RenderHost {
           if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
           this.hint(e.which === 'active' ? 'Your hunter was eaten! Back to your stationary half.' : 'Your stationary half was eaten!', 2.6);
           break;
+        case 'expand':
+          this.sfx.recombine();
+          if (navigator.vibrate) navigator.vibrate([30, 30, 60]);
+          this.hint(e.expansions === 1 ? 'The arena grew! No more gems. Hunt slimes to keep growing.' : 'The arena grew again!', 4);
+          break;
         case 'gameover':
           this.sfx.gameOver();
           if (navigator.vibrate) navigator.vibrate(120);

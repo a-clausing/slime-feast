@@ -57,7 +57,8 @@ export type GameEvent =
   | { type: 'recombine'; survivorId: number; mergedId: number; x: number; y: number }
   | { type: 'portionLost'; which: 'active' | 'home'; lostId: number; survivorId: number }
   | { type: 'gameover' }
-  | { type: 'spawn'; id: number };
+  | { type: 'spawn'; id: number }
+  | { type: 'expand'; shiftY: number; width: number; height: number; expansions: number };
 
 export interface RunStats {
   score: number;

@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
 import { CONFIG } from '../config';
-import { generateDecor } from '../core/arena';
+import { decorForWorld } from '../core/arena';
 import { canConsume, radiusForMass } from '../core/mass';
 import type { GameEvent, Slime } from '../core/types';
-import type { World } from '../core/world';
+import { viewSpan, type World } from '../core/world';
 import { DECOR_REF, ENEMY_TINTS, FLOOR_REF, FOOD_BIG_REF, FOOD_REF, PLAYER_TINT, SLIME_BODY_R, generateTextures } from './textures';
 
 interface SlimeView {
@@ -64,8 +64,8 @@ export class GameScene extends Phaser.Scene {
   private links: { g: Phaser.GameObjects.Graphics; t: number; a: number; b: number }[] = [];
   private boundWorld: World | null = null;
   private frame = 0;
-  private camX = CONFIG.WORLD_WIDTH / 2;
-  private camY = CONFIG.WORLD_HEIGHT / 2;
+  private camX: number = CONFIG.WORLD_WIDTH / 2;
+  private camY: number = CONFIG.WORLD_HEIGHT / 2;
   private camZoom = 1;
   dpr = 1;
   /** Menu background: slow drifting camera with no player. */
@@ -94,53 +94,9 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     generateTextures(this);
-    const W = CONFIG.WORLD_WIDTH;
-    const H = CONFIG.WORLD_HEIGHT;
-    const floorW = this.texW('floor');
-    // the painted floor has ~4 slabs per tile; keep slabs around 120 world units
-    const floorScale = floorW === FLOOR_REF ? 1 : 0.95;
-    this.add.tileSprite(0, 0, W, H, 'floor').setOrigin(0).setDepth(DEPTH.floor).setTileScale(floorScale).setTint(0xa49cb4);
     this.foodScale = [0, 1, 2, 3].map((v) => FOOD_REF / this.texW(`food${v}`));
     this.foodBigScale = FOOD_BIG_REF / this.texW('foodBig');
-
-    // decorations (seeded, constant layout)
-    for (const d of generateDecor(1337)) {
-      const ds = DECOR_REF / this.texW(`decor${d.type}`);
-      // Dimmed and desaturated toward the floor so decorations never read as gems or creatures.
-      this.add
-        .image(d.x, d.y, `decor${d.type}`)
-        .setScale(d.scale * 1.15 * ds)
-        .setRotation(d.rot)
-        .setDepth(DEPTH.decor)
-        .setTint(0x5e5470)
-        .setAlpha(d.type === 2 ? 0.35 : 0.6);
-    }
-
-    // walls: thick stone border with a glowing inner edge + torches
-    const g = this.add.graphics().setDepth(DEPTH.wall);
-    const T = 36;
-    g.fillStyle(0x0b0612, 1);
-    g.fillRect(0, 0, W, T);
-    g.fillRect(0, H - T, W, T);
-    g.fillRect(0, 0, T, H);
-    g.fillRect(W - T, 0, T, H);
-    g.fillStyle(0x2a1d3d, 1);
-    for (let x = 0; x < W; x += 60) {
-      g.fillRect(x + 2, 4, 56, T - 10);
-      g.fillRect(x + 2, H - T + 6, 56, T - 10);
-    }
-    for (let y = 0; y < H; y += 60) {
-      g.fillRect(4, y + 2, T - 10, 56);
-      g.fillRect(W - T + 6, y + 2, T - 10, 56);
-    }
-    g.lineStyle(4, 0x8a4dff, 0.55);
-    g.strokeRect(T, T, W - 2 * T, H - 2 * T);
-    for (let x = 300; x < W; x += 600) {
-      for (const y of [T / 2, H - T / 2]) this.torch(x, y);
-    }
-    for (let y = 300; y < H; y += 600) {
-      for (const x of [T / 2, W - T / 2]) this.torch(x, y);
-    }
+    this.buildArena(CONFIG.WORLD_WIDTH, CONFIG.WORLD_HEIGHT, 0);
 
     // particle pool
     for (let i = 0; i < CONFIG.MAX_PARTICLES; i++) {
@@ -148,9 +104,7 @@ export class GameScene extends Phaser.Scene {
       this.particles.push({ img, vx: 0, vy: 0, life: 0, max: 1, size: 1, active: false });
     }
 
-    const cam = this.cameras.main;
-    cam.setBounds(0, 0, W, H);
-    cam.setBackgroundColor('#0a0610');
+    this.cameras.main.setBackgroundColor('#0a0610');
     this.ready = true;
     this.game.events.emit('scene-ready');
   }
@@ -162,10 +116,86 @@ export class GameScene extends Phaser.Scene {
     return (this.textures.get(key).getSourceImage() as HTMLImageElement).width;
   }
 
-  private torch(x: number, y: number): void {
-    const glow = this.add.image(x, y, 'glow').setTint(0xff9a3c).setScale(1.6).setAlpha(0.5).setDepth(DEPTH.wall).setBlendMode(Phaser.BlendModes.ADD);
-    this.add.circle(x, y, 7, 0xffd27a).setDepth(DEPTH.wall);
-    this.tweens.add({ targets: glow, alpha: { from: 0.35, to: 0.6 }, scale: { from: 1.45, to: 1.7 }, duration: 380 + Math.random() * 300, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+  private arenaObjs: Phaser.GameObjects.GameObject[] = [];
+  private arenaW = 0;
+  private arenaH = 0;
+  private arenaExp = -1;
+  /** Arena scale (1 at start, doubles with each expansion). */
+  private ws = 1;
+
+  /**
+   * (Re)builds floor, walls, torches and decorations for the current arena size.
+   * Object counts for walls/torches stay constant as the arena grows (spacing scales).
+   */
+  private buildArena(W: number, H: number, expansions: number): void {
+    if (W === this.arenaW && H === this.arenaH && expansions === this.arenaExp) return;
+    for (const o of this.arenaObjs) {
+      this.tweens.killTweensOf(o);
+      o.destroy();
+    }
+    this.arenaObjs = [];
+    this.arenaW = W;
+    this.arenaH = H;
+    this.arenaExp = expansions;
+    const sc = W / CONFIG.WORLD_WIDTH;
+    this.ws = sc;
+    const keep = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      this.arenaObjs.push(o);
+      return o;
+    };
+
+    const floorScale = (this.texW('floor') === FLOOR_REF ? 1 : 0.95) * sc;
+    keep(this.add.tileSprite(0, 0, W, H, 'floor').setOrigin(0).setDepth(DEPTH.floor).setTileScale(floorScale).setTint(0xa49cb4));
+
+    // decorations — dimmed and desaturated toward the floor so they never read as gems or creatures
+    for (const d of decorForWorld(1337, expansions)) {
+      const ds = DECOR_REF / this.texW(`decor${d.type}`);
+      keep(
+        this.add
+          .image(d.x, d.y, `decor${d.type}`)
+          .setScale(d.scale * 1.15 * ds)
+          .setRotation(d.rot)
+          .setDepth(DEPTH.decor)
+          .setTint(0x5e5470)
+          .setAlpha(d.type === 2 ? 0.35 : 0.6),
+      );
+    }
+
+    // walls: thick stone border with a glowing inner edge + torches
+    const g = keep(this.add.graphics().setDepth(DEPTH.wall));
+    const T = 36 * sc;
+    const step = 60 * sc;
+    g.fillStyle(0x0b0612, 1);
+    g.fillRect(0, 0, W, T);
+    g.fillRect(0, H - T, W, T);
+    g.fillRect(0, 0, T, H);
+    g.fillRect(W - T, 0, T, H);
+    g.fillStyle(0x2a1d3d, 1);
+    const brickStep = step * Math.max(1, Math.round(W / (60 * sc) / 50)); // ≤ ~50 bricks per side
+    for (let x = 0; x < W; x += brickStep) {
+      g.fillRect(x + 2 * sc, 4 * sc, brickStep - 4 * sc, T - 10 * sc);
+      g.fillRect(x + 2 * sc, H - T + 6 * sc, brickStep - 4 * sc, T - 10 * sc);
+    }
+    for (let y = 0; y < H; y += brickStep) {
+      g.fillRect(4 * sc, y + 2 * sc, T - 10 * sc, brickStep - 4 * sc);
+      g.fillRect(W - T + 6 * sc, y + 2 * sc, T - 10 * sc, brickStep - 4 * sc);
+    }
+    g.lineStyle(4 * sc, 0x8a4dff, 0.55);
+    g.strokeRect(T, T, W - 2 * T, H - 2 * T);
+    const tstep = W / 5;
+    for (let x = tstep / 2; x < W; x += tstep) {
+      for (const y of [T / 2, H - T / 2]) this.torch(x, y, sc, keep);
+    }
+    for (let y = tstep / 2; y < H; y += tstep) {
+      for (const x of [T / 2, W - T / 2]) this.torch(x, y, sc, keep);
+    }
+    this.cameras.main.setBounds(0, 0, W, H);
+  }
+
+  private torch(x: number, y: number, sc: number, keep: <T extends Phaser.GameObjects.GameObject>(o: T) => T): void {
+    const glow = keep(this.add.image(x, y, 'glow').setTint(0xff9a3c).setScale(1.6 * sc).setAlpha(0.5).setDepth(DEPTH.wall).setBlendMode(Phaser.BlendModes.ADD));
+    keep(this.add.circle(x, y, 7 * sc, 0xffd27a).setDepth(DEPTH.wall));
+    this.tweens.add({ targets: glow, alpha: { from: 0.35, to: 0.6 }, scale: { from: 1.45 * sc, to: 1.7 * sc }, duration: 380 + Math.random() * 300, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   }
 
   // ─────────────────────────── binding ───────────────────────────
@@ -183,9 +213,11 @@ export class GameScene extends Phaser.Scene {
       p.img.setVisible(false);
     }
     this.boundWorld = world;
+    this.buildArena(world.width, world.height, world.expansions);
+    for (let i = 0; i < this.foodIds.length; i++) this.foodIds[i] = -1;
     const a = world.active;
-    this.camX = camera?.x ?? a?.x ?? CONFIG.WORLD_WIDTH / 2;
-    this.camY = camera?.y ?? a?.y ?? CONFIG.WORLD_HEIGHT / 2;
+    this.camX = camera?.x ?? a?.x ?? world.width / 2;
+    this.camY = camera?.y ?? a?.y ?? world.height / 2;
     this.camZoom = camera?.zoom ?? this.targetZoom(a ? radiusForMass(a.mass) : CONFIG.BASE_RADIUS);
     this.applyCamera();
   }
@@ -298,7 +330,7 @@ export class GameScene extends Phaser.Scene {
       for (const e of w.slimes) {
         if (e.kind !== 'enemy' || !e.alive) continue;
         if (!canConsume(e.mass, home.mass)) continue;
-        if (Math.hypot(e.x - home.x, e.y - home.y) - hr - radiusForMass(e.mass) < CONFIG.HOME_THREAT_DIST) {
+        if (Math.hypot(e.x - home.x, e.y - home.y) - hr - radiusForMass(e.mass) < CONFIG.HOME_THREAT_DIST * this.ws) {
           this.homeThreat = true;
           break;
         }
@@ -431,12 +463,12 @@ export class GameScene extends Phaser.Scene {
 
   private targetZoom(radius: number): number {
     const cam = this.cameras.main;
-    const span = Math.min(CONFIG.VIEW_SPAN_MAX, CONFIG.VIEW_SPAN_MIN + radius * CONFIG.VIEW_SPAN_PER_RADIUS);
+    const W = this.arenaW || CONFIG.WORLD_WIDTH;
+    const H = this.arenaH || CONFIG.WORLD_HEIGHT;
+    const span = viewSpan(radius, W, H);
     const narrow = Math.min(cam.width, cam.height);
-    let z = narrow / span;
     // never show beyond the arena
-    z = Math.max(z, cam.width / CONFIG.WORLD_WIDTH, cam.height / CONFIG.WORLD_HEIGHT);
-    return z;
+    return Math.max(narrow / span, cam.width / W, cam.height / H);
   }
 
   private updateCamera(w: World, dt: number): void {
@@ -452,8 +484,8 @@ export class GameScene extends Phaser.Scene {
       this.camZoom += (tz - this.camZoom) * (1 - Math.exp(-CONFIG.CAMERA_ZOOM_FOLLOW * dt));
     } else if (this.attract) {
       const t = this.time.now / 1000;
-      this.camX = CONFIG.WORLD_WIDTH / 2 + Math.sin(t * 0.045) * 700;
-      this.camY = CONFIG.WORLD_HEIGHT / 2 + Math.sin(t * 0.031 + 1) * 700;
+      this.camX = this.arenaW / 2 + Math.sin(t * 0.045) * 700;
+      this.camY = this.arenaH / 2 + Math.sin(t * 0.031 + 1) * 700;
       this.camZoom = this.targetZoom(CONFIG.BASE_RADIUS * 1.6);
     }
     this.applyCamera();
@@ -461,7 +493,7 @@ export class GameScene extends Phaser.Scene {
 
   private applyCamera(): void {
     const cam = this.cameras.main;
-    const minZ = Math.max(cam.width / CONFIG.WORLD_WIDTH, cam.height / CONFIG.WORLD_HEIGHT);
+    const minZ = Math.max(cam.width / (this.arenaW || CONFIG.WORLD_WIDTH), cam.height / (this.arenaH || CONFIG.WORLD_HEIGHT));
     if (this.camZoom < minZ) this.camZoom = minZ;
     cam.setZoom(this.camZoom);
     cam.centerOn(this.camX, this.camY);
@@ -493,12 +525,12 @@ export class GameScene extends Phaser.Scene {
     for (const p of this.particles) {
       if (p.active) continue;
       const a = Math.random() * Math.PI * 2;
-      const s = speed * (0.4 + Math.random() * 0.8);
+      const s = speed * this.ws * (0.4 + Math.random() * 0.8);
       p.active = true;
       p.vx = Math.cos(a) * s;
       p.vy = Math.sin(a) * s;
       p.life = p.max = life * (0.6 + Math.random() * 0.6);
-      p.size = size * (0.6 + Math.random() * 0.8);
+      p.size = size * this.ws * (0.6 + Math.random() * 0.8);
       p.img.setPosition(x, y).setTint(tint).setVisible(true).setAlpha(1).setScale(p.size / 32);
       if (++n >= count) break;
     }
@@ -606,6 +638,18 @@ export class GameScene extends Phaser.Scene {
           const v = this.views.get(ev.lostId);
           if (v) this.burst(v.rx, v.ry, 0xff5050, 20, 320, 22, 0.7);
           this.cameras.main.shake(220, 0.006);
+          break;
+        }
+        case 'expand': {
+          // keep everything visually in place while the world shifts down, then zoom out
+          this.camY += ev.shiftY;
+          for (const v of this.views.values()) v.ry += ev.shiftY;
+          for (const p of this.particles) if (p.active) p.img.y += ev.shiftY;
+          for (const g of this.ghosts) g.fromY += ev.shiftY;
+          for (let i = 0; i < this.foodIds.length; i++) this.foodIds[i] = -1;
+          this.buildArena(ev.width, ev.height, ev.expansions);
+          this.applyCamera();
+          this.cameras.main.flash(260, 120, 60, 200);
           break;
         }
         case 'gameover': {

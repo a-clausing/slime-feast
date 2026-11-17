@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../src/config';
 import { canConsume, radiusForMass, speedForMass, overlapEnoughToEat } from '../src/core/mass';
-import { World } from '../src/core/world';
+import { World, screenCoverage } from '../src/core/world';
 import { deserializeWorld, serializeWorld } from '../src/core/save';
 import { pressureAt } from '../src/core/difficulty';
 import { emptyWorld, enemy, quietStep } from './helpers';
@@ -391,6 +391,76 @@ describe('scoring', () => {
     enemy(w, home.x, home.y, 100);
     quietStep(w, 1);
     expect(w.stats.bestMass).toBe(600);
+  });
+});
+
+describe('arena expansion', () => {
+  it('doubles the arena (adds squares above/right/top-right) once you cover 20% of the screen', () => {
+    const { w, p } = emptyWorld(25, 1500, 1500);
+    const f = w.spawnFood(400, 400);
+    enemy(w, 2500, 2500, 10);
+    // grow until the slime covers > 20% of a portrait screen
+    let m = 25;
+    while (screenCoverage(radiusForMass(m), w.width, w.height) <= CONFIG.EXPAND_COVERAGE) m *= 1.1;
+    p.mass = m;
+    const total = w.totalPlayerMass();
+    quietStep(w, 1);
+    expect(w.expansions).toBe(1);
+    expect(w.width).toBe(CONFIG.WORLD_WIDTH * 2);
+    expect(w.height).toBe(CONFIG.WORLD_HEIGHT * 2);
+    // old arena is now the bottom-left square: everything shifted down by the old height
+    expect(p.y).toBeCloseTo(1500 + CONFIG.WORLD_HEIGHT, 0);
+    expect(p.x).toBeCloseTo(1500, 0);
+    expect(f.y).toBe(400 + CONFIG.WORLD_HEIGHT);
+    expect(w.totalPlayerMass()).toBe(total);
+    // you shrink back on screen after the zoom-out
+    expect(screenCoverage(radiusForMass(p.mass), w.width, w.height)).toBeLessThan(CONFIG.EXPAND_COVERAGE);
+    // food grid still works at the new positions
+    p.x = 400;
+    p.y = 400 + CONFIG.WORLD_HEIGHT;
+    quietStep(w, 1);
+    expect(f.alive).toBe(false);
+  });
+
+  it('stops spawning food after the first expansion, but keeps spawning enemies', () => {
+    const w = new World(11);
+    w.active!.mass = 3000; // big enough not to get eaten while idling
+    w.expand();
+    for (const f of w.food) f.alive = false;
+    const before = w.enemyCount();
+    for (let i = 0; i < 600; i++) w.step(CONFIG.SIM_DT, { x: 0, y: 0 });
+    expect(w.foodCount()).toBe(0);
+    expect(w.enemyCount()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('repeats: expands again at 20% of the bigger screen', () => {
+    const { w, p } = emptyWorld(25);
+    for (let k = 1; k <= 3; k++) {
+      let m = p.mass;
+      while (screenCoverage(radiusForMass(m), w.width, w.height) <= CONFIG.EXPAND_COVERAGE) m *= 1.1;
+      p.mass = m;
+      quietStep(w, 1);
+      expect(w.expansions).toBe(k);
+    }
+    expect(w.width).toBe(CONFIG.WORLD_WIDTH * 8);
+  });
+
+  it('scales speed with the arena so on-screen speed stays the same', () => {
+    const { w, p } = emptyWorld(200);
+    w.expand();
+    quietStep(w, 120, { x: 1, y: 0 });
+    expect(Math.hypot(p.vx, p.vy)).toBeCloseTo(speedForMass(200) * 2, 3);
+  });
+
+  it('survives save/restore after expanding', () => {
+    const w = new World(3);
+    w.expand();
+    const r = deserializeWorld(JSON.parse(JSON.stringify(serializeWorld(w))));
+    expect(r.width).toBe(w.width);
+    expect(r.expansions).toBe(1);
+    expect(r.foodEnabled).toBe(false);
+    for (let i = 0; i < 120; i++) r.step(CONFIG.SIM_DT, { x: 1, y: 0 });
+    expect(Number.isFinite(r.active!.x)).toBe(true);
   });
 });
 
