@@ -1,7 +1,7 @@
 /* Slime Feast service worker — offline support.
  * Navigations: network-first (so updates arrive), falling back to the cached shell.
  * Everything else same-origin: cache-first (Vite asset names are content-hashed). */
-const CACHE = 'slime-feast-v5';
+const CACHE = 'slime-feast-v6';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './logo.png', './menu-slime.png', './split-button.png', './icons/icon-192.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

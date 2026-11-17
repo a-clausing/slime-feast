@@ -508,7 +508,7 @@ export class GameScene extends Phaser.Scene {
   private insetCheck = 0;
 
   private measureInsets(): void {
-    const H = window.innerHeight;
+    const H = document.getElementById('app')?.getBoundingClientRect().height || window.innerHeight;
     const hud = document.getElementById('hud');
     const split = document.getElementById('btn-split');
     const visible = (el: HTMLElement | null) => !!el && !el.classList.contains('hidden');

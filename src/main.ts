@@ -8,8 +8,38 @@ function dpr(): number {
   return Math.min(window.devicePixelRatio || 1, CONFIG.MAX_DPR);
 }
 
-/** Size of the game container (#app), which CSS sizes to the full screen incl. iOS standalone. */
+/**
+ * iOS home-screen (standalone) apps with a translucent status bar report a viewport that is
+ * one status-bar height too short, so 100vh/100%/innerHeight all leave a band at the bottom.
+ * In that mode the app always fills the physical screen, so size the container from `screen`.
+ */
+function isStandalone(): boolean {
+  return (
+    (navigator as Navigator & { standalone?: boolean }).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
+  );
+}
+function fitAppToScreen(): void {
+  const app = document.getElementById('app')!;
+  const portrait = window.matchMedia('(orientation: portrait)').matches;
+  if (isStandalone() && portrait && screen.height > window.innerHeight) {
+    const sw = Math.min(screen.width, screen.height);
+    const sh = Math.max(screen.width, screen.height);
+    app.style.width = `${sw}px`;
+    app.style.height = `${sh}px`;
+    document.documentElement.style.height = `${sh}px`;
+    document.body.style.height = `${sh}px`;
+  } else {
+    app.style.width = '';
+    app.style.height = '';
+    document.documentElement.style.height = '';
+    document.body.style.height = '';
+  }
+}
+
+/** Size of the game container (#app). */
 function viewport(): { w: number; h: number } {
+  fitAppToScreen();
   const r = document.getElementById('app')!.getBoundingClientRect();
   const w = Math.round(r.width) || window.innerWidth;
   const h = Math.round(r.height) || window.innerHeight;

@@ -83,8 +83,9 @@ export class Hud {
     this.cls('ind', this.ind, 'hidden', false);
     this.cls('ind', this.ind, 'threat', scene.homeThreat);
 
-    const W = window.innerWidth;
-    const H = window.innerHeight;
+    const appRect = document.getElementById('app')!.getBoundingClientRect();
+    const W = appRect.width || window.innerWidth;
+    const H = appRect.height || window.innerHeight;
     const hudRect = this.hud.getBoundingClientRect();
     const splitRect = this.split.getBoundingClientRect();
     const left = 34;

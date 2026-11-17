@@ -36,9 +36,9 @@ body {
   top: 0;
   left: 0;
   width: 100vw;
-  /* iOS standalone (home-screen) reports innerHeight without the status bar; 100vh is the full screen */
   height: 100vh;
   height: 100lvh;
+  /* in iOS home-screen mode, main.ts sets an explicit full-screen height (see fitAppToScreen) */
   overflow: hidden;
 }
 
