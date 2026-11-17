@@ -127,6 +127,14 @@ try {
     });
     check('joystick release stops movement', v.input.x === 0 && v.input.y === 0 && v.speed < 5, `speed=${v.speed.toFixed(2)}`);
 
+    // joystick also works on the right side of the screen
+    const rx0 = (await state(page)).x;
+    await touchDrag(page, client, 3, 300, 500, -60, 0, 700);
+    const rx1 = (await state(page)).x;
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    check('joystick works from the right side too', rx1 < rx0 - 30, `dx=${(rx1 - rx0).toFixed(1)}`);
+    await sleep(500);
+
     // split disabled below 100
     const splitDisabled = await page.$eval('#btn-split', (b) => b.classList.contains('disabled'));
     check('SPLIT shows disabled below 100 mass', splitDisabled);

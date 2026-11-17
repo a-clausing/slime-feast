@@ -109,7 +109,7 @@ export class App implements RenderHost {
     this.tryLockPortrait();
     if (this.tutorialStage < 4) {
       this.tutorialStage = 0;
-      this.hint('Drag on the left side to move', 999);
+      this.hint('Drag anywhere to move', 999);
     }
   }
 
